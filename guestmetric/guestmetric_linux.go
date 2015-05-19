@@ -100,7 +100,7 @@ func EnumNetworkAddresses(iface string) (GuestMetric, error) {
 		v4re = IFCONFIG_IPV4_ADDR_RE
 		v6re = IFCONFIG_IPV6_ADDR_RE
 	} else {
-		return nil, fmt.Errorf("Cannot found ip/ifconfig command")
+		return nil, fmt.Errorf("Cannot find ip/ifconfig command")
 	}
 
 	m := v4re.FindAllStringSubmatch(out, -1)
@@ -204,7 +204,8 @@ func (c *Collector) CollectDisk() (GuestMetric, error) {
 			name := path
 			blkid, err := runCmd("blkid", "-s", "UUID", path)
 			if err != nil {
-				return nil, err
+				// ignore blkid errors
+				blkid = ""
 			}
 			if strings.Contains(blkid, "=") {
 				parts := strings.SplitN(strings.TrimSpace(blkid), "=", 2)
