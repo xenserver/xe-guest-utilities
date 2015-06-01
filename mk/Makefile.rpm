@@ -1,0 +1,128 @@
+# -*- makefile -*-
+USE_BRANDING := yes
+IMPORT_VERSIONS := yes
+include $(B_BASE)/common.mk
+
+RPM_LOCAL_RPMBUILD_OPTIONS := -D '_source_payload w9.gzdio' -D '_binary_payload w9.gzdio' \
+	-D '_source_filedigest_algorithm 0' -D '_binary_filedigest_algorithm 0'
+include $(B_BASE)/rpmbuild.mk
+
+RPM_BUILT_COOKIE = $(MY_OBJ_DIR)/.rpm_built_cookie
+
+REPO= $(call git_loc,xe-guest-utilities)
+REPOSTAMP= $(call git_req,xe-guest-utilities)
+
+STAGING_DIR = $(MY_OBJ_DIR)/staging
+INSTALL_DIR = $(STAGING_DIR)/Linux/
+VERSIONS_FILE = $(MY_OBJ_DIR)/versions
+
+ARCHS = i386 x86_64
+
+VERSION = $(PRODUCT_VERSION)
+RELEASE := $(shell git --git-dir="$(REPO)/.git" rev-list HEAD | wc -l)
+
+SPEC= xe-guest-utilities.spec
+SRPM= xe-guest-utilities-$(VERSION)-$(RELEASE).src.rpm
+
+GOTARBALL = /distfiles/golang/go1.4.2.linux-386.tar.gz
+GOROOT = $(MY_OBJ_DIR)/go
+GOBIN = GOROOT=$(GOROOT) $(GOROOT)/bin/go
+GOFLAGS = -a -x
+GOBUILDDIR = $(MY_OBJ_DIR)/gobuild
+
+GO_SOURCE_REPO = $(call git_loc,xe-guest-utilities)
+
+XE_DAEMON_GO_SOURCES :=
+XE_DAEMON_GO_SOURCES += ./xe-daemon/xe-daemon.go  # this should be the first one
+XE_DAEMON_GO_SOURCES += ./guestmetric/guestmetric.go
+XE_DAEMON_GO_SOURCES += ./guestmetric/guestmetric_linux.go
+XE_DAEMON_GO_SOURCES += ./xenstoreclient/xenstore.go
+
+XENSTORE_GO_SOURCES :=
+XENSTORE_GO_SOURCES += ./xenstore/xenstore.go  # this should be the first one
+XENSTORE_GO_SOURCES += ./xenstoreclient/xenstore.go
+
+SOURCES :=
+SOURCES += $(RPM_SOURCESDIR)/xe-linux-distribution
+SOURCES += $(RPM_SOURCESDIR)/xe-linux-distribution.init
+SOURCES += $(RPM_SOURCESDIR)/xe-daemon
+SOURCES += $(RPM_SOURCESDIR)/xenstore
+
+SOURCES += $(RPM_SOURCESDIR)/Citrix.repo
+SOURCES += $(RPM_SOURCESDIR)/xen-vcpu-hotplug.rules
+SOURCES += $(RPM_SOURCESDIR)/LICENSE
+
+TOOLS_TARBALL = $(MY_OUTPUT_DIR)/tools-files.tar.bz2
+
+.PHONY: build
+build: $(RPM_BUILT_COOKIE) $(RPM_DIRECTORIES) $(TOOLS_TARBALL) $(ARCHS:%=$(MY_OUTPUT_DIR)/xe-guest-utilities.%.inc) $(MY_SOURCES)/MANIFEST
+	@ :
+
+.PHONY: clean
+clean:
+	rm -f $(RPM_SPECSDIR)/$(SPEC)
+	rm -rf $(RPM_BUILDDIR) $(RPM_SOURCESDIR) $(RPM_SPECSDIR)
+	rm -f $(RPM_BUILT_COOKIE)
+	rm -rf $(GOROOT)
+	rm -rf $(DESTDIR)
+
+$(RPM_SPECSDIR)/$(SPEC): $(SPEC).in
+	$(call brand,$<) | \
+	sed -e 's,@VERSION@,$(VERSION),g' \
+	    -e 's,@RELEASE@,$(RELEASE),g' \
+	    > $@
+
+$(MY_OUTPUT_DIR)/xe-guest-utilities.%.inc: $(MY_OUTPUT_DIR)/.dirstamp
+	( echo XE_GUEST_UTILITIES_PKG_NAME := xe-guest-utilities ; \
+	  echo XE_GUEST_UTILITIES_PKG_VERSION := $(VERSION)-$(RELEASE) ; \
+	  echo XE_GUEST_UTILITIES_PKG_ARCH := $* ; \
+	  echo XE_GUEST_UTILITIES_PKG_FILE := RPMS/$*/xe-guest-utilities-$(VERSION)-$(RELEASE).$*.rpm ; \
+	)>$@
+
+$(RPM_BUILT_COOKIE): $(RPM_DIRECTORIES) $(RPM_SPECSDIR)/$(SPEC) $(SOURCES)
+	$(RPMBUILD) -bs $(RPM_SPECSDIR)/$(SPEC)
+	set -ex ; for arch in $(ARCHS) ; do \
+		$(RPMBUILD) --target=$${arch} --rebuild $(RPM_SRPMSDIR)/$(SRPM) ; \
+	done
+
+$(MY_SOURCES)/MANIFEST: $(MY_SOURCES_DIRSTAMP)
+	( echo "$(COMPONENT) GPL file $(RPM_SRPMSDIR)/$(SRPM)" ; \
+        ) >$@
+
+.PHONY: sources
+sources: $(MY_SOURCES)/MANIFEST
+	@ :
+
+$(RPM_SOURCESDIR)/%: $(REPO)/mk/%
+	mkdir -p $(RPM_SOURCESDIR)
+	$(call brand,$<) > $@
+
+$(RPM_SOURCESDIR)/xe-daemon: $(XE_DAEMON_GO_SOURCES:%=$(REPO)/%) $(GOROOT)
+	$(GOBIN) build $(GOFLAGS) -o $@ $<
+
+$(RPM_SOURCESDIR)/xenstore: $(XENSTORE_GO_SOURCES:%=$(REPO)/%) $(GOROOT)
+	$(GOBIN) build $(GOFLAGS) -o $@ $<
+
+$(RPM_SOURCESDIR)/LICENSE: $(REPO)/LICENSE
+	$(call brand,$<) > $@
+
+$(GOBUILDDIR)/%: $(GO_SOURCE_REPO)/%
+	mkdir -p $$(dirname $@)
+	$(call brand,$<) > $@
+
+$(TOOLS_TARBALL): $(RPM_BUILT_COOKIE)
+	mkdir -p $(INSTALL_DIR)
+	rm -f $(INSTALL_DIR)/versions.rpm
+	$(foreach arch,$(ARCHS),\
+	echo XE_GUEST_UTILITIES_PKG_FILE_$(arch)=\'xe-guest-utilities-$(VERSION)-$(RELEASE).$(arch).rpm xe-guest-utilities-xenstore-$(VERSION)-$(RELEASE).$(arch).rpm\' >> $(INSTALL_DIR)/versions.rpm ;\
+	cp -v $(MY_OUTPUT_DIR)/RPMS/$(arch)/xe-guest-utilities-$(VERSION)-$(RELEASE).$(arch).rpm $(INSTALL_DIR)/ ;\
+	cp -v $(MY_OUTPUT_DIR)/RPMS/$(arch)/xe-guest-utilities-xenstore-$(VERSION)-$(RELEASE).$(arch).rpm $(INSTALL_DIR)/ ;\
+	)
+	tar -C $(STAGING_DIR) -cjf $@ .
+
+$(GOROOT):
+	mkdir -p $(GOROOT)
+	( cd $(GOROOT)/.. ; \
+	  tar xf $(GOTARBALL) ;\
+	)
+

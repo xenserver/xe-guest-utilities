@@ -1,0 +1,55 @@
+#!/usr/bin/make -f
+
+build: build-stamp
+build-stamp:
+	touch $@
+
+clean:
+	dh_testdir
+	dh_testroot
+
+	dh_clean
+
+binary: binary-arch binary-indep
+
+binary-arch: DESTDIR=debian/xe-guest-utilities
+binary-arch: build
+	dh_testdir
+	dh_testroot
+
+	dh_clean -k
+
+	dh_installdirs 
+
+	cp xe-linux-distribution $(DESTDIR)/usr/sbin/xe-linux-distribution
+	chmod 0755 $(DESTDIR)/usr/sbin/xe-linux-distribution
+
+	install -d $(DESTDIR)/usr/bin/
+	install -m 755 xenstore $(DESTDIR)/usr/bin/xenstore
+	ln -s /usr/bin/xenstore $(DESTDIR)/usr/bin/xenstore-read
+	ln -s /usr/bin/xenstore $(DESTDIR)/usr/bin/xenstore-write
+	ln -s /usr/bin/xenstore $(DESTDIR)/usr/bin/xenstore-exists
+	ln -s /usr/bin/xenstore $(DESTDIR)/usr/bin/xenstore-rm
+
+	cp xe-daemon $(DESTDIR)/usr/sbin/xe-daemon
+	chmod 0755 $(DESTDIR)/usr/sbin/xe-daemon
+
+	cp xen-vcpu-hotplug.rules $(DESTDIR)/lib/udev/rules.d/z10_xen-vcpu-hotplug.rules
+
+	dh_installinit --name xe-linux-distribution
+
+	dh_install citrix.list /usr/share/xe-guest-utilities
+
+	dh_installdocs LICENSE
+
+	dh_strip
+	dh_compress
+	dh_fixperms
+	dh_makeshlibs
+	dh_shlibdeps
+	dh_installdeb
+	dh_gencontrol
+	dh_md5sums
+	dh_builddeb
+
+binary-indep:

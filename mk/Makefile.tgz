@@ -1,0 +1,143 @@
+# -*- makefile -*-
+USE_BRANDING := yes
+IMPORT_VERSIONS := yes
+include $(B_BASE)/common.mk
+
+REPO= $(call git_loc,xe-guest-utilities)
+REPOSTAMP= $(call git_req,xe-guest-utilities)
+
+ARCHS = i386 amd64
+DISTROS = linux
+
+TGZ_BUILT_COOKIE  = $(MY_OBJ_DIR)/.tgz_built_cookie
+TGZ_REPO_COOKIE   = $(MY_OBJ_DIR)/.tgz_%_repo_cookie
+TGZ_REPO_COOKIES  = $(DISTROS:%=$(TGZ_REPO_COOKIE))
+
+STAGING_DIR = $(MY_OBJ_DIR)/staging
+INSTALL_DIR = $(STAGING_DIR)/Linux/
+VERSIONS_FILE = $(MY_OBJ_DIR)/versions
+TOOLS_TARBALL = $(MY_OUTPUT_DIR)/tools-files.tar.bz2
+ 
+
+PACKAGE = xe-guest-utilities
+VERSION = $(PRODUCT_VERSION)
+RELEASE := $(shell git --git-dir="$(REPO)/.git" rev-list HEAD | wc -l)
+
+SOURCEDIR := $(MY_OBJ_DIR)/$(PACKAGE)-$(VERSION)/
+DESTDIR := $(MY_OBJ_DIR)/$(PACKAGE)/
+
+
+GOTARBALL = /distfiles/golang/go1.4.2.linux-386.tar.gz
+GOROOT = $(MY_OBJ_DIR)/go
+GOBIN = GOROOT=$(GOROOT) $(GOROOT)/bin/go
+GOFLAGS = -a -x
+GOBUILDDIR = $(MY_OBJ_DIR)/gobuild
+
+GO_SOURCE_REPO = $(call git_loc,xe-guest-utilities)
+
+XE_DAEMON_GO_SOURCES :=
+XE_DAEMON_GO_SOURCES += ./xe-daemon/xe-daemon.go  # this should be the first one
+XE_DAEMON_GO_SOURCES += ./guestmetric/guestmetric.go
+XE_DAEMON_GO_SOURCES += ./guestmetric/guestmetric_linux.go
+XE_DAEMON_GO_SOURCES += ./xenstoreclient/xenstore.go
+
+XENSTORE_GO_SOURCES :=
+XENSTORE_GO_SOURCES += ./xenstore/xenstore.go  # this should be the first one
+XENSTORE_GO_SOURCES += ./xenstoreclient/xenstore.go
+
+SOURCES := 
+SOURCES += $(REPO)/LICENSE
+SOURCES += $(SOURCEDIR)/xe-linux-distribution
+SOURCES += $(SOURCEDIR)/xe-linux-distribution.init
+SOURCES += $(SOURCEDIR)/xe-daemon
+SOURCES += $(SOURCEDIR)/xenstore
+SOURCES += $(SOURCEDIR)/citrix.list
+SOURCES += $(SOURCEDIR)/xen-vcpu-hotplug.rules
+
+822_DATE := $(shell date -R)
+
+.PHONY: build
+build: $(TOOLS_TARBALL) $(TGZ_BUILT_COOKIE) $(TGZ_REPO_COOKIES) $(ARCHS:%=$(MY_OUTPUT_DIR)/xe-guest-utilities.%.inc) $(MY_SOURCES)/MANIFEST
+	@ :
+
+.PHONY: clean
+clean:
+	rm -f $(TGZ_BUILT_COOKIE)
+	rm -f $(TGZ_REPO_COOKIES)
+	rm -rf $(GOROOT)
+	rm -rf $(SOURCEDIR)
+	rm -rf $(DESTDIR)
+
+local-brand := sed -e 's,@VERSION@,$(VERSION),g' \
+	           -e 's,@RELEASE@,$(RELEASE),g' \
+	           -e "s!@822DATE@!$(822_DATE)!g"
+
+$(SOURCEDIR)/%: $(REPO)/mk/%
+	mkdir -p $(SOURCEDIR)
+	$(call brand,$<) | $(call local-brand) > $@
+
+$(SOURCEDIR)/citrix.list: citrix.list
+	$(call brand,$<) > $@
+
+$(SOURCEDIR)/xe-daemon: $(XE_DAEMON_GO_SOURCES:%=$(REPO)/%) $(GOROOT)
+	$(GOBIN) build $(GOFLAGS) -o $@ $<
+
+$(SOURCEDIR)/xenstore: $(XENSTORE_GO_SOURCES:%=$(REPO)/%) $(GOROOT)
+	$(GOBIN) build $(GOFLAGS) -o $@ $<
+
+$(GOBUILDDIR)/%: $(GO_SOURCE_REPO)/%
+	mkdir -p $$(dirname $@)
+	$(call brand,$<) > $@
+
+$(MY_OUTPUT_DIR)/xe-guest-utilities.%.inc: $(MY_OUTPUT_DIR)/.dirstamp
+	( echo XE_GUEST_UTILITIES_PKG_NAME := xe-guest-utilities ; \
+	  echo XE_GUEST_UTILITIES_PKG_VERSION := $(VERSION)-$(RELEASE) ; \
+	  echo XE_GUEST_UTILITIES_PKG_ARCH := $* ; \
+	  echo XE_GUEST_UTILITIES_PKG_FILE := $(MY_OBJ_DIR)/$(PACKAGE)_$(VERSION)-$(RELEASE)_all.tgz ; \
+	)>$@
+
+$(TGZ_BUILT_COOKIE): $(SOURCES)
+	( cd $(SOURCEDIR) ; \
+	  install -d $(DESTDIR)/etc/init.d/ ; \
+	  install -m 755 xe-linux-distribution.init $(DESTDIR)/etc/init.d/xe-linux-distribution ; \
+	  install -d $(DESTDIR)/usr/sbin/ ; \
+	  install -m 755 xe-linux-distribution $(DESTDIR)/usr/sbin/xe-linux-distribution ; \
+	  install -m 755 xe-daemon $(DESTDIR)/usr/sbin/xe-daemon ; \
+	  install -d $(DESTDIR)/usr/bin/ ; \
+	  install -m 755 xenstore $(DESTDIR)/usr/bin/xenstore ; \
+	  ln -s /usr/bin/xenstore $(DESTDIR)/usr/bin/xenstore-read ; \
+	  ln -s /usr/bin/xenstore $(DESTDIR)/usr/bin/xenstore-write ; \
+	  ln -s /usr/bin/xenstore $(DESTDIR)/usr/bin/xenstore-exists ; \
+	  ln -s /usr/bin/xenstore $(DESTDIR)/usr/bin/xenstore-rm ; \
+	  install -d $(DESTDIR)/etc/udev/rules.d/ ; \
+	  install -m 644 xen-vcpu-hotplug.rules $(DESTDIR)/etc/udev/rules.d/z10_xen-vcpu-hotplug.rules ; \
+	  install -d $(DESTDIR)/usr/share/doc/$(PACKAGE)_$(VERSION)/ ; \
+	  install -m 644 $(REPO)/LICENSE $(DESTDIR)/usr/share/doc/$(PACKAGE)_$(VERSION)/LICENSE ; \
+	  cd $(DESTDIR) ; \
+	  tar cvf $(MY_OBJ_DIR)/$(PACKAGE)_$(VERSION)-$(RELEASE)_all.tgz * \
+	)>$@
+
+$(MY_SOURCES)/MANIFEST: $(MY_SOURCES_DIRSTAMP)
+	echo >$@
+
+.PHONY: sources
+sources: $(MY_SOURCES)/MANIFEST
+	@ :
+
+$(TGZ_REPO_COOKIE): $(TGZ_BUILT_COOKIE)
+	touch $@
+
+# package up in a tools tarball so it gets on the ISO
+$(TOOLS_TARBALL): $(TGZ_BUILT_COOKIE)
+	mkdir -p $(INSTALL_DIR)
+	rm -f $(INSTALL_DIR)/versions.tgz
+	$(foreach arch,$(ARCHS),\
+	  echo XE_GUEST_UTILITIES_PKG_FILE_$(arch)=\'xe-guest-utilities_$(VERSION)-$(RELEASE)_all.tgz\' >> $(INSTALL_DIR)/versions.tgz ; cp -v $(MY_OBJ_DIR)/xe-guest-utilities_$(VERSION)-$(RELEASE)_all.tgz $(INSTALL_DIR)/ ;)
+	tar -C $(STAGING_DIR) -cjf $@ .
+
+$(GOROOT):
+	mkdir -p $(GOROOT)
+	( cd $(GOROOT)/.. ; \
+	  tar xf $(GOTARBALL) ;\
+	)
+

@@ -1,0 +1,172 @@
+# -*- makefile -*-
+USE_BRANDING := yes
+IMPORT_VERSIONS := yes
+include $(B_BASE)/common.mk
+
+REPO= $(call git_loc,xe-guest-utilities)
+REPOSTAMP= $(call git_req,xe-guest-utilities)
+
+ARCHS = i386 amd64
+DISTROS = lenny
+
+DEB_BUILT_COOKIE  = $(MY_OBJ_DIR)/.deb_built_cookie
+DEB_REPO_COOKIE   = $(MY_OBJ_DIR)/.deb_%_repo_cookie
+DEB_REPO_COOKIES  = $(DISTROS:%=$(DEB_REPO_COOKIE))
+
+STAGING_DIR = $(MY_OBJ_DIR)/staging
+INSTALL_DIR = $(STAGING_DIR)/Linux/
+VERSIONS_FILE = $(MY_OBJ_DIR)/versions
+TOOLS_TARBALL = $(MY_OUTPUT_DIR)/tools-files.tar.bz2
+ 
+
+PACKAGE = xe-guest-utilities
+VERSION = $(PRODUCT_VERSION)
+RELEASE := $(shell git --git-dir="$(REPO)/.git" rev-list HEAD | wc -l)
+
+SOURCEDIR := $(MY_OBJ_DIR)/$(PACKAGE)-$(VERSION)/
+DEBIANDIR := $(SOURCEDIR)/debian/
+
+DEBPOOLDIR := debian/pool/main/x/xe-guest-utilities
+
+GOTARBALL = /distfiles/golang/go1.4.2.linux-386.tar.gz
+GOROOT = $(MY_OBJ_DIR)/go
+GOBIN = GOROOT=$(GOROOT) $(GOROOT)/bin/go
+GOFLAGS = -a -x
+GOBUILDDIR = $(MY_OBJ_DIR)/gobuild
+GO_SOURCE_REPO = $(call git_loc,xe-guest-utilities)
+
+XE_DAEMON_GO_SOURCES :=
+XE_DAEMON_GO_SOURCES += ./xe-daemon/xe-daemon.go  # this should be the first one
+XE_DAEMON_GO_SOURCES += ./guestmetric/guestmetric.go
+XE_DAEMON_GO_SOURCES += ./guestmetric/guestmetric_linux.go
+XE_DAEMON_GO_SOURCES += ./xenstoreclient/xenstore.go
+
+XENSTORE_GO_SOURCES :=
+XENSTORE_GO_SOURCES += ./xenstore/xenstore.go  # this should be the first one
+XENSTORE_GO_SOURCES += ./xenstoreclient/xenstore.go
+
+SOURCES := 
+SOURCES += $(SOURCEDIR)/xe-linux-distribution
+SOURCES += $(SOURCEDIR)/xe-daemon
+SOURCES += $(SOURCEDIR)/xenstore
+SOURCES += $(SOURCEDIR)/LICENSE
+SOURCES += $(SOURCEDIR)/citrix.list
+SOURCES += $(SOURCEDIR)/xen-vcpu-hotplug.rules
+SOURCES += $(DEBIANDIR)/xe-linux-distribution.init
+SOURCES += $(DEBIANDIR)/xe-guest-utilities.postinst
+SOURCES += $(DEBIANDIR)/xe-guest-utilities.prerm
+SOURCES += $(DEBIANDIR)/control
+SOURCES += $(DEBIANDIR)/changelog
+SOURCES += $(DEBIANDIR)/rules
+SOURCES += $(DEBIANDIR)/compat
+SOURCES += $(DEBIANDIR)/copyright
+SOURCES += $(DEBIANDIR)/$(PACKAGE).dirs
+
+822_DATE := $(shell date -R)
+
+.PHONY: build
+build: $(TOOLS_TARBALL) $(DEB_BUILT_COOKIE) $(DEB_REPO_COOKIES) $(ARCHS:%=$(MY_OUTPUT_DIR)/xe-guest-utilities.%.inc) $(MY_SOURCES)/MANIFEST
+	@ :
+
+.PHONY: clean
+clean:
+	rm -f $(DEB_BUILT_COOKIE)
+	rm -f $(DEB_REPO_COOKIES)
+	rm -rf $(GOROOT)
+	rm -rf $(SOURCEDIR)
+	rm -rf $(DEBIANDIR)
+	rm -f $(MY_OBJ_DIR)/overrides
+
+local-brand := sed -e 's,@VERSION@,$(VERSION),g' \
+	           -e 's,@RELEASE@,$(RELEASE),g' \
+	           -e "s!@822DATE@!$(822_DATE)!g"
+
+$(DEBIANDIR)/%: $(REPO)/%
+	mkdir -p $(DEBIANDIR)
+	$(call brand,$<) | $(call local-brand) > $@
+
+$(DEBIANDIR)/xe-linux-distribution.init: $(REPO)/mk/xe-linux-distribution.init
+	mkdir -p $(DEBIANDIR)
+	$(call brand,$<) | $(call local-brand) > $@
+
+$(SOURCEDIR)/%: $(REPO)/mk/%
+	mkdir -p $(SOURCEDIR)
+	$(call brand,$<) | $(call local-brand) > $@
+
+$(SOURCEDIR)/citrix.list: citrix.list
+	$(call brand,$<) > $@
+
+$(SOURCEDIR)/xe-daemon: $(XE_DAEMON_GO_SOURCES:%=$(REPO)/%) $(GOROOT)
+	$(GOBIN) build $(GOFLAGS) -o $@ $<
+
+$(SOURCEDIR)/xenstore: $(XENSTORE_GO_SOURCES:%=$(REPO)/%) $(GOROOT)
+	$(GOBIN) build $(GOFLAGS) -o $@ $<
+
+$(SOURCEDIR)/LICENSE: $(REPO)/LICENSE
+	$(call brand,$<) > $@
+
+$(GOBUILDDIR)/%: $(GO_SOURCE_REPO)/%
+	mkdir -p $$(dirname $@)
+	$(call brand,$<) > $@
+
+$(MY_OUTPUT_DIR)/xe-guest-utilities.%.inc: $(MY_OUTPUT_DIR)/.dirstamp
+	( echo XE_GUEST_UTILITIES_PKG_NAME := xe-guest-utilities ; \
+	  echo XE_GUEST_UTILITIES_PKG_VERSION := $(VERSION)-$(RELEASE) ; \
+	  echo XE_GUEST_UTILITIES_PKG_ARCH := $* ; \
+	  echo XE_GUEST_UTILITIES_PKG_FILE := $(DEBPOOLDIR)/$(PACKAGE)_$(VERSION)-$(RELEASE)_all.deb ; \
+	)>$@
+
+$(DEB_BUILT_COOKIE): $(SOURCES)	
+	mkdir -p $(MY_OUTPUT_DIR)/$(DEBPOOLDIR)
+	chmod +x $(DEBIANDIR)/rules
+	cd $(SOURCEDIR) && dpkg-buildpackage -Zgzip -S -us -uc
+	cp $(MY_OBJ_DIR)/$(PACKAGE)_$(VERSION)-$(RELEASE).dsc $(MY_OUTPUT_DIR)/$(DEBPOOLDIR)
+	cp $(MY_OBJ_DIR)/$(PACKAGE)_$(VERSION)-$(RELEASE).tar.gz $(MY_OUTPUT_DIR)/$(DEBPOOLDIR)
+	set -xe ; for arch in $(ARCHS) ; do \
+		( cd $(SOURCEDIR) && dpkg-buildpackage -Zgzip -b -a$${arch} -us -uc ) ; \
+		cp $(MY_OBJ_DIR)/$(PACKAGE)_$(VERSION)-$(RELEASE)_all.deb $(MY_OUTPUT_DIR)/$(DEBPOOLDIR) ; \
+	done
+	touch $@
+
+$(MY_SOURCES)/MANIFEST: $(MY_SOURCES_DIRSTAMP)
+	( echo "$(COMPONENT) GPL file $(MY_OUTPUT_DIR)/$(DEBPOOLDIR)/$(PACKAGE)_$(VERSION)-$(RELEASE).dsc" ; \
+	  echo "$(COMPONENT) GPL file $(MY_OUTPUT_DIR)/$(DEBPOOLDIR)/$(PACKAGE)_$(VERSION)-$(RELEASE).tar.gz" ; \
+        ) >$@
+
+.PHONY: sources
+sources: $(MY_SOURCES)/MANIFEST
+	@ :
+
+$(MY_OBJ_DIR)/overrides:
+	echo xe-guest-utilities optional base >$@
+
+$(DEB_REPO_COOKIE): $(DEB_BUILT_COOKIE) $(MY_OBJ_DIR)/overrides
+	mkdir -p $(MY_OUTPUT_DIR)/$(DEBPOOLDIR)
+	cp -La $(MY_OBJ_DIR)/*.deb $(MY_OUTPUT_DIR)/$(DEBPOOLDIR)
+	set -ex ; for arch in $(ARCHS) ; do \
+	    bindir=debian/dists/$*/main/binary-$${arch} ; \
+	    mkdir -p $(MY_OUTPUT_DIR)/$${bindir} ; \
+	    ( cd $(MY_OUTPUT_DIR)/debian/ && \
+	      dpkg-scanpackages -a$${arch} pool $(MY_OBJ_DIR)/overrides \
+	    ) > $(MY_OUTPUT_DIR)/$${bindir}/Packages ; \
+	done
+	mkdir -p $(MY_OUTPUT_DIR)/debian/dists/$*/main/source
+	( cd $(MY_OUTPUT_DIR)/debian/ && \
+	  dpkg-scansources pool \
+	) > $(MY_OUTPUT_DIR)/debian/dists/$*/main/source/Sources
+	touch $@
+
+# package up in a tools tarball so it gets on the ISO
+$(TOOLS_TARBALL): $(DEB_BUILT_COOKIE)
+	mkdir -p $(INSTALL_DIR)
+	rm -f $(INSTALL_DIR)/versions.deb
+	$(foreach arch,$(ARCHS),\
+	  echo XE_GUEST_UTILITIES_PKG_FILE_$(arch)=\'xe-guest-utilities_$(VERSION)-$(RELEASE)_all.deb\' >> $(INSTALL_DIR)/versions.deb ; cp -v $(MY_OBJ_DIR)/xe-guest-utilities_$(VERSION)-$(RELEASE)_all.deb $(INSTALL_DIR)/ ;)
+	tar -C $(STAGING_DIR) -cjf $@ .
+
+$(GOROOT):
+	mkdir -p $(GOROOT)
+	( cd $(GOROOT)/.. ; \
+	  tar xf $(GOTARBALL) ;\
+	)
+

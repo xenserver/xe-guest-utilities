@@ -1,0 +1,124 @@
+# -*- rpm-spec -*-
+
+Summary: @BRAND_GUEST@ Monitoring Scripts
+Name: xe-guest-utilities
+Version: @VERSION@
+Release: @RELEASE@
+License: GPL/LGPL
+Group: Xen
+URL: http://www.citrix.com
+Vendor: @COMPANY_NAME_LEGAL@
+Source0: xe-linux-distribution
+Source1: xe-linux-distribution.init
+Source3: xe-daemon
+Source5: Citrix.repo
+Source6: xenstore
+Source8: LICENSE
+Source9: xen-vcpu-hotplug.rules
+BuildRoot: %{_tmppath}/%{name}-%{version}-%{release}-buildroot
+BuildRequires: golang
+Obsoletes: xengmond
+
+%description
+Scripts for monitoring @BRAND_GUESTS@.
+
+Writes distribution version information and IP address to XenStore.
+
+%package xenstore
+Summary: @BRAND_GUEST@ XenStore utilities
+Group: Xen
+%description xenstore
+Utilities for interacting with XenStore from with a Xen virtual machine
+
+%prep
+# Nothing to do
+%build
+# Nothing to do
+
+%install
+rm -rf %{buildroot}
+
+mkdir -p %{buildroot}/usr/sbin/
+mkdir -p %{buildroot}/usr/share/doc/%{name}-%{version}/examples/
+mkdir -p %{buildroot}/etc/init.d
+mkdir -p %{buildroot}/etc/udev/rules.d
+
+cp %{SOURCE0} %{buildroot}/usr/sbin/xe-linux-distribution
+chmod 755 %{buildroot}/usr/sbin/xe-linux-distribution
+
+cp %{SOURCE1} %{buildroot}/etc/init.d/xe-linux-distribution
+chmod 755 %{buildroot}/etc/init.d/xe-linux-distribution
+
+cp %{SOURCE3} %{buildroot}/usr/sbin/xe-daemon
+chmod 755 %{buildroot}/usr/sbin/xe-daemon
+
+cp %{SOURCE5} %{buildroot}/usr/share/doc/%{name}-%{version}/examples/
+
+install -d %{buildroot}/usr/bin/
+install -m 755 %{SOURCE6}  %{buildroot}/usr/bin/xenstore
+ln -s /usr/bin/xenstore %{buildroot}/usr/bin/xenstore-read
+ln -s /usr/bin/xenstore %{buildroot}/usr/bin/xenstore-write
+ln -s /usr/bin/xenstore %{buildroot}/usr/bin/xenstore-exists
+ln -s /usr/bin/xenstore %{buildroot}/usr/bin/xenstore-rm
+
+cp %{SOURCE9} %{buildroot}/etc/udev/rules.d/z10-xen-vcpu-hotplug.rules
+
+cp %{SOURCE8} %{buildroot}/usr/share/doc/%{name}-%{version}/
+
+mkdir -p %{buildroot}/usr/share/doc/%{name}-xenstore-%{version}
+cp %{SOURCE8} %{buildroot}/usr/share/doc/%{name}-xenstore-%{version}/
+
+%clean
+rm -rf %{buildroot}
+
+%post
+/sbin/chkconfig --add xe-linux-distribution >/dev/null
+[ -n "${EXTERNAL_P2V}" ] || service xe-linux-distribution start >/dev/null 2>&1
+
+eval $(/usr/sbin/xe-linux-distribution)
+
+if [ -d /etc/yum.repos.d ] && [ -n "${os_distro}" ] && [ -n "${os_majorver}" ] ; then
+    distro="${os_distro}${os_majorver}x"
+    case "${distro}" in
+    rhel4x|centos4x)
+        if [ -f /etc/yum.repos.d/XenSource.repo ] ; then
+            rm -f /etc/yum.repos.d/XenSource.repo # contains deprecated urls
+        fi
+        sed -e "s/@DISTRO@/${distro}/g" \
+            < /usr/share/doc/%{name}-%{version}/examples/Citrix.repo \
+            > /etc/yum.repos.d/Citrix.repo
+        ;;
+    rhel3x|rhel5x|centos5x|oracle5x) # No vendor kernel any more. Remove Citrix.repo
+        if [ -f /etc/yum.repos.d/Citrix.repo ] ; then
+            rm -f /etc/yum.repos.d/Citrix.repo
+        fi
+        ;;
+    *) ;;
+    esac
+fi
+
+%preun
+if [ $1 -eq 0 ] ; then
+    service xe-linux-distribution stop >/dev/null 2>&1
+    /sbin/chkconfig --del xe-linux-distribution >/dev/null
+    rm -f /etc/yum.repos.d/Citrix.repo || /bin/true
+fi
+
+%files 
+%defattr(-,root,root,-)
+/usr/sbin/xe-linux-distribution
+/etc/init.d/xe-linux-distribution
+/usr/sbin/xe-daemon
+/etc/udev/rules.d/z10-xen-vcpu-hotplug.rules
+/usr/share/doc/%{name}-%{version}/examples/Citrix.repo
+/usr/share/doc/%{name}-%{version}/LICENSE
+
+%files xenstore
+%defattr(-,root,root,-)
+/usr/bin/xenstore-*
+/usr/bin/xenstore
+/usr/share/doc/%{name}-xenstore-%{version}/LICENSE
+
+%changelog
+* Tue Jun 5 2007  <citrix.com>
+- Xen monitor scripts

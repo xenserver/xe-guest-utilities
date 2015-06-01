@@ -1,0 +1,5 @@
+xe-guest-utilities (@VERSION@-@RELEASE@) etch; urgency=low
+
+  * Build for @PRODUCT_NAME@ @PRODUCT_VERSION@-@BUILD_NUMBER@.
+
+ -- @COMPANY_NAME_LEGAL@ <www.citrix.com>  @822DATE@
