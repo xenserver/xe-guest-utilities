@@ -1,0 +1,9 @@
+language: go
+sudo: false
+go:
+  # Used for building XenServer Dundee
+  - 1.4.2
+  # Forwards compatibility
+  - release
+script:
+  - gofmtresult=$(gofmt -s -l .); if [[ -n $gofmtresult ]]; then echo -e "Please run \"gofmt -s -w .\" before committing for the below:\n$gofmtresult"; false; fi

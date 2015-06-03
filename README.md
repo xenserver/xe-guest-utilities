@@ -1,3 +1,5 @@
+[![Build Status](https://travis-ci.org/xenserver/xe-guest-utilities.svg?branch=master)](https://travis-ci.org/xenserver/xe-guest-utilities)
+
 go-guest-utilites
 ===================
 
