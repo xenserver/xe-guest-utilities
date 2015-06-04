@@ -86,7 +86,7 @@ $(RPM_BUILT_COOKIE): $(RPM_DIRECTORIES) $(RPM_SPECSDIR)/$(SPEC) $(SOURCES)
 	done
 
 $(MY_SOURCES)/MANIFEST: $(MY_SOURCES_DIRSTAMP)
-	( echo "$(COMPONENT) GPL file $(RPM_SRPMSDIR)/$(SRPM)" ; \
+	( echo "$(COMPONENT) BSD 2-Clause file $(RPM_SRPMSDIR)/$(SRPM)" ; \
         ) >$@
 
 .PHONY: sources
