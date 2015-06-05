@@ -1,0 +1,41 @@
+#!/bin/sh
+
+set -e
+
+if [ $1 != "--short" ] ; then
+    echo "Invalid parameter: $1" 1>&2
+    exit 1
+fi
+
+if [ ! -f "${TESTCASE}" ] ; then
+    echo "Testcase ${TESTCASE} not found" 1>&2
+    exit 1
+fi
+
+case $(basename ${TESTCASE}) in
+    lsb-*) ;;
+    *) exit 1
+esac
+
+. ${TESTCASE}
+
+if [ -z "$ID" ] ; then
+     ID="$DISTRIB_ID"
+fi
+if [ -z "$DESCRIPTION" ] ; then
+     DESCRIPTION="$DISTRIB_DESCRIPTION"
+fi
+if [ -z "$RELEASE" ] ; then
+     RELEASE="$DISTRIB_RELEASE"
+fi
+
+case $2 in
+    --id) echo ${ID} ;;
+    --description) echo ${DESCRIPTION} ;;
+    --release) echo ${RELEASE} ;;
+    *)
+	echo "Invalid paramter: $2" 1>&2
+	exit 1;;
+esac
+
+exit 0

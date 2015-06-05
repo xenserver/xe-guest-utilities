@@ -1,0 +1,20 @@
+#!/bin/sh
+
+#DEBHELPER#
+
+if [ X"$1" = X"configure" ] ; then
+    eval $(/usr/sbin/xe-linux-distribution)
+    if [ -d /etc/apt/sources.list.d ] && [ X"${os_distro}" = X"debian" ] \
+       && [ -n "${os_majorver}" ] && [ -n "${os_minorver}" ] ; then
+	case "${os_majorver}${os_minorver}" in
+	    50) distro="lenny" ;;
+	    *) ;;
+	esac
+	if [ -n "${distro}" ] ; then
+            rm -f /etc/apt/sources.list.d/xensource.list # contains deprecated urls
+	    sed -e "s/@DISTRO@/${distro}/g" \
+		< /usr/share/xe-guest-utilities/citrix.list \
+		> /etc/apt/sources.list.d/citrix.list
+	fi
+    fi
+fi

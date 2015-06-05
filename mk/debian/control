@@ -1,0 +1,15 @@
+Source: xe-guest-utilities
+Section: main/admin
+Priority: optional
+Maintainer: Citrix Systems, Inc. <www.citrix.com>
+Standards-Version: 3.7.2
+Build-Depends: debhelper (>= 4.0.0)
+
+Package: xe-guest-utilities
+Architecture: all
+Conflicts: xengmond
+Replaces: xengmond
+Description: @BRAND_GUEST@ Monitoring Scripts
+ Scripts for monitoring @BRAND_GUESTS@.
+ .
+ Writes distribution version information and IP address to XenStore.
