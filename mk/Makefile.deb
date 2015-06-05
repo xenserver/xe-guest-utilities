@@ -129,8 +129,8 @@ $(DEB_BUILT_COOKIE): $(SOURCES)
 	touch $@
 
 $(MY_SOURCES)/MANIFEST: $(MY_SOURCES_DIRSTAMP)
-	( echo "$(COMPONENT) BSD 2-Clause file $(MY_OUTPUT_DIR)/$(DEBPOOLDIR)/$(PACKAGE)_$(VERSION)-$(RELEASE).dsc" ; \
-	  echo "$(COMPONENT) BSD 2-Clause file $(MY_OUTPUT_DIR)/$(DEBPOOLDIR)/$(PACKAGE)_$(VERSION)-$(RELEASE).tar.gz" ; \
+	( echo "$(COMPONENT) BSD file $(MY_OUTPUT_DIR)/$(DEBPOOLDIR)/$(PACKAGE)_$(VERSION)-$(RELEASE).dsc" ; \
+	  echo "$(COMPONENT) BSD file $(MY_OUTPUT_DIR)/$(DEBPOOLDIR)/$(PACKAGE)_$(VERSION)-$(RELEASE).tar.gz" ; \
         ) >$@
 
 .PHONY: sources

@@ -4,7 +4,7 @@ Summary: @BRAND_GUEST@ Monitoring Scripts
 Name: xe-guest-utilities
 Version: @VERSION@
 Release: @RELEASE@
-License: BSD 2-Clause
+License: BSD
 Group: Xen
 URL: http://www.citrix.com
 Vendor: @COMPANY_NAME_LEGAL@
