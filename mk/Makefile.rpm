@@ -97,10 +97,10 @@ $(RPM_SOURCESDIR)/%: $(REPO)/mk/%
 	mkdir -p $(RPM_SOURCESDIR)
 	$(call brand,$<) > $@
 
-$(RPM_SOURCESDIR)/xe-daemon: $(XE_DAEMON_GO_SOURCES:%=$(REPO)/%) $(GOROOT)
+$(RPM_SOURCESDIR)/xe-daemon: $(XE_DAEMON_GO_SOURCES:%=$(GOBUILDDIR)/%) $(GOROOT)
 	$(GOBIN) build $(GOFLAGS) -o $@ $<
 
-$(RPM_SOURCESDIR)/xenstore: $(XENSTORE_GO_SOURCES:%=$(REPO)/%) $(GOROOT)
+$(RPM_SOURCESDIR)/xenstore: $(XENSTORE_GO_SOURCES:%=$(GOBUILDDIR)/%) $(GOROOT)
 	$(GOBIN) build $(GOFLAGS) -o $@ $<
 
 $(RPM_SOURCESDIR)/LICENSE: $(REPO)/LICENSE

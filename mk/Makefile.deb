@@ -96,10 +96,10 @@ $(SOURCEDIR)/%: $(REPO)/mk/%
 $(SOURCEDIR)/citrix.list: citrix.list
 	$(call brand,$<) > $@
 
-$(SOURCEDIR)/xe-daemon: $(XE_DAEMON_GO_SOURCES:%=$(REPO)/%) $(GOROOT)
+$(SOURCEDIR)/xe-daemon: $(XE_DAEMON_GO_SOURCES:%=$(GOBUILDDIR)/%) $(GOROOT)
 	$(GOBIN) build $(GOFLAGS) -o $@ $<
 
-$(SOURCEDIR)/xenstore: $(XENSTORE_GO_SOURCES:%=$(REPO)/%) $(GOROOT)
+$(SOURCEDIR)/xenstore: $(XENSTORE_GO_SOURCES:%=$(GOBUILDDIR)/%) $(GOROOT)
 	$(GOBIN) build $(GOFLAGS) -o $@ $<
 
 $(SOURCEDIR)/LICENSE: $(REPO)/LICENSE
