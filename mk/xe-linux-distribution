@@ -266,8 +266,8 @@ identify_lsb()
     fi
 
     eval $(echo $release | awk -F. -- '{ subindex = index($0,"."); \
-                                         print "major=" $1 ; \
-                                         print "minor=" substr($0,subindex+1) }')
+                                         print "major=\"" $1 "\""; \
+                                         print "minor=\"" substr($0,subindex+1) "\"" }')
 
     if [ -z "${major}" -o -z "${distro}" ] ; then
         return 1
