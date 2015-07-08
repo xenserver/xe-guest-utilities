@@ -118,7 +118,7 @@ $(TGZ_BUILT_COOKIE): $(SOURCES)
 	)>$@
 
 $(MY_SOURCES)/MANIFEST: $(MY_SOURCES_DIRSTAMP)
-	echo >$@
+	touch $@
 
 .PHONY: sources
 sources: $(MY_SOURCES)/MANIFEST
