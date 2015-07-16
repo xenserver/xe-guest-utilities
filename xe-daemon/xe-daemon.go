@@ -5,23 +5,19 @@ import (
 	xenstoreclient "../xenstoreclient"
 	"flag"
 	"fmt"
+	"io"
+	"io/ioutil"
 	"log"
 	"os"
 	"os/signal"
+	"strconv"
 	"syscall"
 	"time"
 )
 
-func write_pid_file(pid_file string) error {
-	f, err := os.Create(pid_file)
-	if err != nil {
-		return err
-	}
-	defer f.Close()
-
-	fmt.Fprintf(f, "%d\n", os.Getpid())
-	return nil
-}
+const (
+	LoggerName string = "xe-daemon"
+)
 
 func main() {
 	var err error
@@ -34,17 +30,32 @@ func main() {
 	flag.Parse()
 
 	if *pid != "" {
-		write_pid_file(*pid)
+		if err = ioutil.WriteFile(*pid, []byte(strconv.Itoa(os.Getpid())), 0644); err != nil {
+			fmt.Fprintf(os.Stderr, "Write pid to %s error: %s\n", *pid, err)
+			return
+		}
 	}
 
-	logger := log.New(os.Stderr, "xe-daemon", 0)
+	var loggerWriter io.Writer = os.Stderr
+	var topic string = LoggerName
+	if w, err := NewSyslogWriter(topic); err == nil {
+		loggerWriter = w
+		topic = ""
+	} else {
+		fmt.Fprintf(os.Stderr, "NewSyslogWriter(%s) error: %s, use stderr logging\n", topic, err)
+		topic = LoggerName + ": "
+	}
+
+	logger := log.New(loggerWriter, topic, 0)
 
 	exitChannel := make(chan os.Signal, 1)
 	signal.Notify(exitChannel, syscall.SIGTERM, syscall.SIGINT)
 
 	xs, err := xenstoreclient.NewCachedXenstore(0)
 	if err != nil {
-		logger.Printf("NewCachedXenstore error: %v", err)
+		message := fmt.Sprintf("NewCachedXenstore error: %v\n", err)
+		logger.Print(message)
+		fmt.Fprint(os.Stderr, message)
 		return
 	}
 
@@ -68,13 +79,13 @@ func main() {
 
 	lastUniqueID, err := xs.Read("unique-domain-id")
 	if err != nil {
-		logger.Printf("xenstore.Read unique-domain-id error: %v", err)
+		logger.Printf("xenstore.Read unique-domain-id error: %v\n", err)
 	}
 
 	for count := 0; ; count += 1 {
 		uniqueID, err := xs.Read("unique-domain-id")
 		if err != nil {
-			logger.Printf("xenstore.Read unique-domain-id error: %v", err)
+			logger.Printf("xenstore.Read unique-domain-id error: %v\n", err)
 			return
 		}
 		if uniqueID != lastUniqueID {
@@ -86,30 +97,41 @@ func main() {
 		}
 
 		// invoke collectors
+		updated := false
 		for _, collector := range collectors {
 			if count%collector.divisor == 0 {
-				logger.Printf("Running %s ...", collector.name)
+				logger.Printf("Running %s ...\n", collector.name)
 				result, err := collector.Collect()
 				if err != nil {
-					logger.Printf("%s error: %#v", collector.name, err)
+					logger.Printf("%s error: %#v\n", collector.name, err)
 				} else {
 					for name, value := range result {
 						err := xs.Write(name, value)
 						if err != nil {
-							logger.Printf("xenstore.Write error: %v", err)
+							logger.Printf("xenstore.Write error: %v\n", err)
 						} else {
-							logger.Printf("xenstore.Write OK: %#v: %#v", name, value)
+							if *debugFlag {
+								logger.Printf("xenstore.Write OK: %#v: %#v\n", name, value)
+							}
+							updated = true
 						}
 					}
 				}
 			}
 		}
 
-		xs.Write("data/updated", time.Now().Format("Mon Jan _2 15:04:05 2006"))
+		if updated {
+			xs.Write("data/updated", time.Now().Format("Mon Jan _2 15:04:05 2006"))
+		}
 
 		select {
 		case <-exitChannel:
-			logger.Printf("Received an interrupt, stopping services...")
+			logger.Printf("Received an interrupt, stopping services...\n")
+			if c, ok := loggerWriter.(io.Closer); ok {
+				if err := c.Close(); err != nil {
+					fmt.Fprintf(os.Stderr, "logger close error: %s\n", err)
+				}
+			}
 			return
 
 		case <-time.After(time.Duration(*sleepInterval) * time.Second):
