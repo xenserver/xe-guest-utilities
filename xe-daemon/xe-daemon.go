@@ -2,6 +2,7 @@ package main
 
 import (
 	guestmetric "../guestmetric"
+	syslog "../syslog"
 	xenstoreclient "../xenstoreclient"
 	"flag"
 	"fmt"
@@ -38,7 +39,7 @@ func main() {
 
 	var loggerWriter io.Writer = os.Stderr
 	var topic string = LoggerName
-	if w, err := NewSyslogWriter(topic); err == nil {
+	if w, err := syslog.NewSyslogWriter(topic); err == nil {
 		loggerWriter = w
 		topic = ""
 	} else {

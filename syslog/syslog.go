@@ -1,7 +1,7 @@
 // To run 32bit xe-daemon under 64bit system,
 // Here we re-implement a syslog writer base on logger CLI.
 
-package main
+package syslog
 
 import (
 	"io"
