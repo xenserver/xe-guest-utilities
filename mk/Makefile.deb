@@ -31,12 +31,13 @@ DEBPOOLDIR := debian/pool/main/x/xe-guest-utilities
 GOTARBALL = /distfiles/golang/go1.4.2.linux-386.tar.gz
 GOROOT = $(MY_OBJ_DIR)/go
 GOBIN = GOROOT=$(GOROOT) $(GOROOT)/bin/go
-GOFLAGS = -a -x
+GOFLAGS = -v
 GOBUILDDIR = $(MY_OBJ_DIR)/gobuild
 GO_SOURCE_REPO = $(call git_loc,xe-guest-utilities)
 
 XE_DAEMON_GO_SOURCES :=
 XE_DAEMON_GO_SOURCES += ./xe-daemon/xe-daemon.go  # this should be the first one
+XE_DAEMON_GO_SOURCES += ./syslog/syslog.go
 XE_DAEMON_GO_SOURCES += ./guestmetric/guestmetric.go
 XE_DAEMON_GO_SOURCES += ./guestmetric/guestmetric_linux.go
 XE_DAEMON_GO_SOURCES += ./xenstoreclient/xenstore.go

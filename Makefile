@@ -4,7 +4,7 @@ PRODUCT_MICRO_VERSION=80
 PRODUCT_VERSION = $(PRODUCT_MAJOR_VERSION).$(PRODUCT_MINOR_VERSION).$(PRODUCT_MICRO_VERSION)
 
 GO_BUILD = go build
-GO_FLAGS = -a -x
+GO_FLAGS = -v
 
 REPO = $(shell pwd)
 SOURCEDIR = $(REPO)/mk
@@ -29,6 +29,7 @@ endif
 
 XE_DAEMON_SOURCES :=
 XE_DAEMON_SOURCES += ./xe-daemon/xe-daemon.go
+XE_DAEMON_SOURCES += ./syslog/syslog.go
 XE_DAEMON_SOURCES += ./guestmetric/guestmetric.go
 XE_DAEMON_SOURCES += ./guestmetric/guestmetric_linux.go
 XE_DAEMON_SOURCES += ./xenstoreclient/xenstore.go
