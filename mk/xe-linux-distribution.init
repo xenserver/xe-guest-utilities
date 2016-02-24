@@ -11,7 +11,7 @@
 # Required-Stop:     $remote_fs
 # Default-Start:     2 3 4 5
 # Default-Stop:      0 1 6
-# Short-Description: XenServer Virtual Machine daemon providing host integration services
+# Short-Description: @BRAND_GUEST@ daemon providing host integration services
 # Description:       Writes Linux distribution version information to XenStore.
 ### END INIT INFO
 

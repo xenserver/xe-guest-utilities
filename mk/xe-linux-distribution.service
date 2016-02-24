@@ -1,5 +1,5 @@
 [Unit]
-Description=XenServer Linux Guest Agent
+Description=Linux Guest Agent
 
 [Service]
 ExecStartPre=/usr/share/oem/xs/xe-linux-distribution /var/cache/xe-linux-distribution
