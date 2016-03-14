@@ -374,7 +374,7 @@ func (xs *CachedXenStore) Write(path string, value string) error {
 		}
 	}
 	err := xs.xs.Write(path, value)
-	if err != nil {
+	if err == nil {
 		xs.writeCache[path] = value
 		xs.lastCommit[path] = time.Now()
 	}
