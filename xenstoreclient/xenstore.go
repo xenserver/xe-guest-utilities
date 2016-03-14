@@ -11,7 +11,6 @@ import (
 	"strconv"
 	"strings"
 	"sync"
-	"time"
 )
 
 type Permission int
@@ -352,7 +351,6 @@ func (xs *XenStore) StopWatch() error {
 type CachedXenStore struct {
 	xs         XenStoreClient
 	writeCache map[string]string
-	lastCommit map[string]time.Time
 }
 
 func NewCachedXenstore(tx uint32) (XenStoreClient, error) {
@@ -363,20 +361,16 @@ func NewCachedXenstore(tx uint32) (XenStoreClient, error) {
 	return &CachedXenStore{
 		xs:         xs,
 		writeCache: make(map[string]string, 0),
-		lastCommit: make(map[string]time.Time, 0),
 	}, nil
 }
 
 func (xs *CachedXenStore) Write(path string, value string) error {
 	if v, ok := xs.writeCache[path]; ok && v == value {
-		if t, ok := xs.lastCommit[path]; ok && t.After(time.Now().Add(-2*time.Minute)) {
-			return nil
-		}
+		return nil
 	}
 	err := xs.xs.Write(path, value)
 	if err == nil {
 		xs.writeCache[path] = value
-		xs.lastCommit[path] = time.Now()
 	}
 	return err
 }
@@ -415,7 +409,6 @@ func (xs *CachedXenStore) StopWatch() error {
 
 func (xs *CachedXenStore) Clear() {
 	xs.writeCache = make(map[string]string, 0)
-	xs.lastCommit = make(map[string]time.Time, 0)
 }
 
 func getDevPath() (devPath string, err error) {
