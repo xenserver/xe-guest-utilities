@@ -55,6 +55,13 @@ func TestXenStore(t *testing.T) {
 	}
 
 	if err := xs.Write("foo", "bar"); err != nil {
-		t.Errorf("xs.Read error: %#v\n", err)
+		t.Errorf("xs.Write error: %#v\n", err)
 	}
+
+	go xs.Watch("foo")
+
+	if err := xs.StopWatch(); err != nil {
+		t.Errorf("xs.StopWatch error: %#v\n", err)
+	}
+
 }
