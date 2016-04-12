@@ -367,7 +367,7 @@ func (xs *XenStore) Watch(path string) (<-chan Event, error) {
 			select {
 			case <-xs.watchStopChan:
 				fmt.Printf("watch receive stop signal, quit.")
-				xs.watchStopChan <- struct{}{}
+				xs.watchStoppedChan <- struct{}{}
 				return
 			case xsdata := <-xsDataChan:
 				if xsdata.Error != nil {
