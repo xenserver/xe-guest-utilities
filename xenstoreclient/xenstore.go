@@ -135,13 +135,32 @@ func (p *Packet) Write(w io.Writer) (err error) {
 	return nil
 }
 
+type WatchQueueManager struct {
+	watchQueues map[string]chan Event
+	rwlocker    *sync.RWMutex
+}
+
+func (wq *WatchQueueManager) ReadFromKey(key string) (ec chan Event, ok bool) {
+	wq.rwlocker.RLock()
+	ec, ok = wq.watchQueues[key]
+	wq.rwlocker.RUnlock()
+	return
+}
+
+func (wq *WatchQueueManager) WriteByKey(key string, ec chan Event) {
+	wq.rwlocker.Lock()
+	wq.watchQueues[key] = ec
+	wq.rwlocker.Unlock()
+	return
+}
+
 type XenStore struct {
 	tx               uint32
 	xbFile           io.ReadWriteCloser
 	xbFileReader     *bufio.Reader
 	muWatch          *sync.Mutex
 	onceWatch        *sync.Once
-	watchQueues      map[string]chan Event
+	watchQueue       WatchQueueManager
 	watchStopChan    chan struct{}
 	watchStoppedChan chan struct{}
 	nonWatchQueue    chan []byte
@@ -162,10 +181,13 @@ func NewXenstore(tx uint32) (XenStoreClient, error) {
 
 func newXenstore(tx uint32, rwc io.ReadWriteCloser) (XenStoreClient, error) {
 	return &XenStore{
-		tx:               tx,
-		xbFile:           rwc,
-		xbFileReader:     bufio.NewReader(rwc),
-		watchQueues:      make(map[string]chan Event, 0),
+		tx:           tx,
+		xbFile:       rwc,
+		xbFileReader: bufio.NewReader(rwc),
+		watchQueue: WatchQueueManager{
+			watchQueues: make(map[string]chan Event, 0),
+			rwlocker:    &sync.RWMutex{},
+		},
 		nonWatchQueue:    nil,
 		watchStopChan:    make(chan struct{}, 1),
 		watchStoppedChan: make(chan struct{}, 1),
@@ -322,7 +344,8 @@ func (xs *XenStore) Watch(path string) (<-chan Event, error) {
 					path := parts[0]
 					token := parts[1]
 					data := []byte(parts[2])
-					if c, ok := xs.watchQueues[path]; ok {
+					c, ok := xs.watchQueue.ReadFromKey(path)
+					if ok {
 						c <- Event{token, data}
 					}
 				default:
@@ -336,10 +359,12 @@ func (xs *XenStore) Watch(path string) (<-chan Event, error) {
 	xs.onceWatch.Do(watcher)
 	xs.muWatch.Lock()
 	defer xs.muWatch.Unlock()
-	if _, ok := xs.watchQueues[path]; !ok {
-		xs.watchQueues[path] = make(chan Event, 100)
+	_, ok := xs.watchQueue.ReadFromKey(path)
+	if !ok {
+		xs.watchQueue.WriteByKey(path, make(chan Event, 100))
 	}
-	return xs.watchQueues[path], nil
+	e, ok := xs.watchQueue.ReadFromKey(path)
+	return e, nil
 }
 
 func (xs *XenStore) StopWatch() error {
