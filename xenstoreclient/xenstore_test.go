@@ -2,40 +2,48 @@ package xenstoreclient
 
 import (
 	"bytes"
+	"fmt"
+	"io"
 	"testing"
+	"time"
 )
 
 type mockFile struct {
-	t *testing.T
+	r         io.Reader
+	w         io.Writer
+	watchKeys map[string]struct{}
+	t         *testing.T
 }
 
-func (f *mockFile) Read(b []byte) (n int, err error) {
-	value := "i am value"
-	p := &Packet{
-		OpCode: XS_READ,
-		Req:    0,
-		TxID:   0,
-		Length: uint32(len(value)),
-		Value:  []byte(value),
+func NewMockFile(t *testing.T) io.ReadWriteCloser {
+	var b bytes.Buffer
+
+	return &mockFile{
+		r:         &b,
+		w:         &b,
+		t:         t,
+		watchKeys: make(map[string]struct{}),
 	}
-	var buf bytes.Buffer
-	if err = p.Write(&buf); err != nil {
-		return 0, err
+}
+
+func (f *mockFile) Read(p []byte) (n int, err error) {
+	for i := 0; i < 1; i++ {
+		n, err = f.r.Read(p)
+		if err == io.EOF {
+			fmt.Printf("Read sleep %#v second\n", i)
+			time.Sleep(1 * time.Second)
+		} else {
+			fmt.Printf("Read=%#v err %#v\n", n, err)
+			return
+		}
 	}
-	copy(b, buf.Bytes())
-	n = buf.Len()
-	f.t.Logf("Read %d bytes", n)
-	return n, nil
+	return 0, io.EOF
 }
 
 func (f *mockFile) Write(b []byte) (n int, err error) {
-	buf := bytes.NewBuffer(b)
-	if _, err := ReadPacket(buf); err != nil {
-		return 0, err
-	}
-	n = len(b)
-	f.t.Logf("Write %d bytes", n)
-	return n, nil
+	n, err = f.w.Write(b)
+	fmt.Printf("Write=%#v err %#v\n", n, err)
+	return
 }
 
 func (f *mockFile) Close() error {
@@ -44,17 +52,46 @@ func (f *mockFile) Close() error {
 }
 
 func TestXenStore(t *testing.T) {
-	xs, err := newXenstore(0, &mockFile{t})
+	xs, err := newXenstore(0, NewMockFile(t))
 	if err != nil {
 		t.Errorf("newXenstore error: %#v\n", err)
 	}
 	defer xs.Close()
 
+	if err := xs.Write("foo", "bar"); err != nil {
+		t.Errorf("xs.Write error: %#v\n", err)
+	}
+
 	if _, err := xs.Read("foo"); err != nil {
 		t.Errorf("xs.Read error: %#v\n", err)
 	}
+}
 
-	if err := xs.Write("foo", "bar"); err != nil {
-		t.Errorf("xs.Read error: %#v\n", err)
+func TestXenStoreWatch2(t *testing.T) {
+	xs, err := newXenstore(0, NewMockFile(t))
+	if err != nil {
+		t.Errorf("newXenstore error: %#v\n", err)
 	}
+	defer xs.Close()
+
+	go func() {
+		time.Sleep(5 * time.Second)
+		if err := xs.StopWatch(); err != nil {
+			t.Errorf("xs.StopWatch error: %#v\n", err)
+		}
+	}()
+
+	go func() {
+		for i := 0; i < 5; i++ {
+			xs.Write("foo", "bar")
+			time.Sleep(1 * time.Second)
+		}
+	}()
+
+	err = xs.Watch("foo", "test")
+	if err != nil {
+		t.Errorf("xs.Watch(\"foo\") error: %#v\n", err)
+	}
+
+	time.Sleep(6 * time.Second)
 }
