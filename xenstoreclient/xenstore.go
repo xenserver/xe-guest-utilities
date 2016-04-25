@@ -13,6 +13,7 @@ import (
 	"strconv"
 	"strings"
 	"sync"
+	"time"
 )
 
 type Permission int
@@ -375,7 +376,7 @@ func (xs *XenStore) UnWatch(path string, token string) (err error) {
 
 func (xs *XenStore) Watch(path string, token string) error {
 	watcher := func() {
-		logger.Printf("Watch: Start")
+		xs.logger.Printf("Watch: Start")
 		type XSData struct {
 			*Packet
 			Error error
@@ -404,13 +405,13 @@ func (xs *XenStore) Watch(path string, token string) error {
 		for {
 			select {
 			case <-xs.watchStopChan:
-				logger.Printf("Watch: receive stop signal, quit.\n")
+				xs.logger.Printf("Watch: receive stop signal, quit.\n")
 				xs.watchStoppedChan <- struct{}{}
 				xsReadStop <- true
 				return
 			case xsdata := <-xsDataChan:
 				if xsdata.Error != nil {
-					logger.Printf("Watch: receive error: %#v", xsdata.Error)
+					xs.logger.Printf("Watch: receive error: %#v", xsdata.Error)
 					return
 				}
 				switch xsdata.Packet.OpCode {
@@ -418,10 +419,10 @@ func (xs *XenStore) Watch(path string, token string) error {
 					parts := strings.SplitN(string(xsdata.Value), "\x00", 2)
 					path := parts[0]
 					token := parts[1]
-					logger.Printf("Get XS_WATCH_EVENT key:%s, token:%s\n", path, token)
+					xs.logger.Printf("Get XS_WATCH_EVENT key:%s, token:%s\n", path, token)
 					xs.watchQueue.SetEventByKey(path, token)
 				default:
-					logger.Printf("Get non watch event %#v\n", xsdata.Packet.OpCode)
+					xs.logger.Printf("Get non watch event %#v\n", xsdata.Packet.OpCode)
 					var b bytes.Buffer
 					xsdata.Packet.Write(&b)
 					xs.nonWatchQueue <- b.Bytes()
@@ -441,7 +442,7 @@ func (xs *XenStore) Watch(path string, token string) error {
 	}
 	_, err := xs.DO(req)
 	if err != nil {
-		logger.Errorf("Watch failed with error %#v\n", err)
+		xs.logger.Printf("Watch failed with error %#v\n", err)
 		return err
 	}
 	xs.watchQueue.AddChanByKey(path)
@@ -542,5 +543,5 @@ func getDevPath() (devPath string, err error) {
 			return devPath, err
 		}
 	}
-	return "", logger.Errorf("Cannot locate xenbus dev path in %v", devPaths)
+	return "", fmt.Errorf("Cannot locate xenbus dev path in %v", devPaths)
 }
