@@ -3,6 +3,7 @@ package main
 import (
 	guestmetric "../guestmetric"
 	syslog "../syslog"
+	system "../system"
 	xenstoreclient "../xenstoreclient"
 	"flag"
 	"fmt"
@@ -51,6 +52,9 @@ func main() {
 
 	exitChannel := make(chan os.Signal, 1)
 	signal.Notify(exitChannel, syscall.SIGTERM, syscall.SIGINT)
+
+	resumedChannel := make(chan int)
+	go system.NotifyResumed(resumedChannel)
 
 	xs, err := xenstoreclient.NewCachedXenstore(0)
 	if err != nil {
@@ -134,6 +138,10 @@ func main() {
 				}
 			}
 			return
+
+		case <-resumedChannel:
+			logger.Printf("Trigger refresh after system resume\n")
+			continue
 
 		case <-time.After(time.Duration(*sleepInterval) * time.Second):
 			continue
