@@ -158,7 +158,22 @@ func (wq *WatchQueueManager) RemoveByKey(key string) {
 func (wq *WatchQueueManager) SetEventByKey(key string, token string) (ok bool) {
 	wq.rwlocker.RLock()
 	defer wq.rwlocker.RUnlock()
-	wq.watchQueues[key] <- token
+	useCurrentKey := false
+	parentKey := ""
+	for k := range wq.watchQueues {
+		if key == k {
+			useCurrentKey = true
+			break
+		} else if strings.HasPrefix(key, k) {
+			parentKey = k
+			break
+		}
+	}
+	if useCurrentKey {
+		wq.watchQueues[key] <- token
+	} else if parentKey != "" {
+		wq.watchQueues[parentKey] <- token
+	}
 	return
 }
 
@@ -177,6 +192,11 @@ func (wq *WatchQueueManager) GetEventByKey(key string) (token string, ok bool) {
 func (wq *WatchQueueManager) AddChanByKey(key string) {
 	wq.rwlocker.Lock()
 	defer wq.rwlocker.Unlock()
+	for k := range wq.watchQueues {
+		if key == k {
+			return
+		}
+	}
 	wq.watchQueues[key] = make(chan string, 100)
 }
 
