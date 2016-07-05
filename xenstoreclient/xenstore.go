@@ -460,10 +460,8 @@ func (xs *XenStore) Watch(path string, token string) error {
 					parts := strings.SplitN(string(xsdata.Value), "\x00", 2)
 					path := parts[0]
 					token := parts[1]
-					xs.logger.Printf("Get XS_WATCH_EVENT key:%s, token:%s\n", path, token)
 					xs.watchQueue.SetEventByKey(path, token)
 				default:
-					xs.logger.Printf("Get non watch event %#v\n", xsdata.Packet.OpCode)
 					var b bytes.Buffer
 					xsdata.Packet.Write(&b)
 					xs.nonWatchQueue <- b.Bytes()
