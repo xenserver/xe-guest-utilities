@@ -534,7 +534,6 @@ func (xs *CachedXenStore) Clear() {
 
 func getDevPath() (devPath string, err error) {
 	devPaths := []string{
-		"/proc/xen/xenbus",
 		"/dev/xen/xenbus",
 		"/kern/xen/xenbus",
 	}
