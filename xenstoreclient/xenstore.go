@@ -193,10 +193,8 @@ func (wq *WatchQueueManager) GetEventByKey(key string) (token string, ok bool) {
 func (wq *WatchQueueManager) AddChanByKey(key string) {
 	wq.rwlocker.Lock()
 	defer wq.rwlocker.Unlock()
-	for k := range wq.watchQueues {
-		if key == k {
-			return
-		}
+	if _, ok := wq.watchQueues[key]; ok {
+		return
 	}
 	wq.watchQueues[key] = make(chan string, 100)
 }
@@ -595,6 +593,7 @@ func getDevPath() (devPath string, err error) {
 	devPaths := []string{
 		"/dev/xen/xenbus",
 		"/kern/xen/xenbus",
+		"/proc/xen/xenbus", //FixMe: Need to disable watch when using this file
 	}
 	for _, devPath = range devPaths {
 		if _, err = os.Stat(devPath); err == nil {
