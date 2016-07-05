@@ -33,6 +33,7 @@ XE_DAEMON_SOURCES += ./syslog/syslog.go
 XE_DAEMON_SOURCES += ./guestmetric/guestmetric.go
 XE_DAEMON_SOURCES += ./guestmetric/guestmetric_linux.go
 XE_DAEMON_SOURCES += ./xenstoreclient/xenstore.go
+XE_DAEMON_SOURCES += ./feature/FeatureIPSetting.go
 
 XENSTORE_SOURCES :=
 XENSTORE_SOURCES += ./xenstore/xenstore.go
