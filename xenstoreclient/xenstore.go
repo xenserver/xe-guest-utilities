@@ -216,10 +216,11 @@ type XenStore struct {
 	nonWatchQueue      chan QueueResponse
 	xbFileReaderLocker *sync.Mutex
 	logger             *log.Logger
+	unWatchable        bool
 }
 
 func NewXenstore(tx uint32) (XenStoreClient, error) {
-	devPath, err := getDevPath()
+	devPath, unWatchable, err := getDevPath()
 	if err != nil {
 		return nil, err
 	}
@@ -228,14 +229,14 @@ func NewXenstore(tx uint32) (XenStoreClient, error) {
 	if err != nil {
 		return nil, err
 	}
-	return newXenstore(tx, xbFile)
+	return newXenstore(tx, xbFile, unWatchable)
 }
 
 const (
 	LoggerName string = "xenstore"
 )
 
-func newXenstore(tx uint32, rwc io.ReadWriteCloser) (XenStoreClient, error) {
+func newXenstore(tx uint32, rwc io.ReadWriteCloser, unWatchable bool) (XenStoreClient, error) {
 	var loggerWriter io.Writer = os.Stderr
 	var topic string = LoggerName
 	if w, err := syslog.NewSyslogWriter(topic); err == nil {
@@ -263,6 +264,7 @@ func newXenstore(tx uint32, rwc io.ReadWriteCloser) (XenStoreClient, error) {
 		muWatch:            &sync.Mutex{},
 		xbFileReaderLocker: &sync.Mutex{},
 		logger:             logger,
+		unWatchable:        unWatchable,
 	}, nil
 }
 
@@ -483,6 +485,10 @@ func (xs *XenStore) Watch(path string, token string) error {
 			}
 		}
 	}
+	if xs.unWatchable {
+		return fmt.Errorf("/proc/xen/xenbus not support for watch")
+	}
+
 	xs.muWatch.Lock()
 	defer xs.muWatch.Unlock()
 	v := []byte(path + "\x00" + token + "\x00")
@@ -589,16 +595,18 @@ func (xs *CachedXenStore) Clear() {
 	xs.writeCache = make(map[string]string, 0)
 }
 
-func getDevPath() (devPath string, err error) {
+func getDevPath() (devPath string, getDevPath bool, err error) {
 	devPaths := []string{
 		"/dev/xen/xenbus",
 		"/kern/xen/xenbus",
-		"/proc/xen/xenbus", //FixMe: Need to disable watch when using this file
+		"/proc/xen/xenbus",
 	}
 	for _, devPath = range devPaths {
 		if _, err = os.Stat(devPath); err == nil {
-			return devPath, err
+			// https://lkml.org/lkml/2016/5/17/196
+			unWatchable := devPath == "/proc/xen/xenbus"
+			return devPath, unWatchable, err
 		}
 	}
-	return "", fmt.Errorf("Cannot locate xenbus dev path in %v", devPaths)
+	return "", true, fmt.Errorf("Cannot locate xenbus dev path in %v", devPaths)
 }
