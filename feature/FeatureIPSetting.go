@@ -146,7 +146,7 @@ func AddSettingHistory(conf Configuration) {
 			found = true
 		}
 	}
-	if found == false {
+	if !found {
 		configurations = append(configurations, conf)
 		if file, err := os.Create(configFile); err == nil {
 			defer file.Close()
