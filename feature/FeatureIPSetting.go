@@ -3,9 +3,12 @@ package feature
 import (
 	syslog "../syslog"
 	xenstoreclient "../xenstoreclient"
+	"bufio"
+	"encoding/json"
 	"fmt"
 	"io"
 	"log"
+	"net"
 	"os"
 	"strings"
 	"time"
@@ -23,6 +26,8 @@ type FeatureIPSetting struct {
 }
 
 const (
+	configFile = "./ipconf.json"
+
 	advertiseKey      = "control/feature-static-ip-setting"
 	controlKey        = "xenserver/device/vif"
 	token             = "FeatureIPSetting"
@@ -86,6 +91,158 @@ func (f *FeatureIPSetting) GetChildrens(key string) []string {
 	return childrens
 }
 
+type OSType int
+
+const (
+	OTHER  OSType = 0
+	CENTOS OSType = 1
+)
+
+func GetCurrentOSType() OSType {
+	distributionFile, err := os.OpenFile("/var/cache/xe-linux-distribution", os.O_RDONLY, 0666)
+	if err != nil {
+		return OTHER
+	}
+	defer distributionFile.Close()
+	scanner := bufio.NewScanner(distributionFile)
+	for scanner.Scan() {
+		line := scanner.Text()
+		if strings.Contains(line, "=") {
+			parts := strings.SplitN(line, "=", 2)
+			k := strings.TrimSpace(parts[0])
+			v := strings.TrimSpace(strings.Trim(strings.TrimSpace(parts[1]), "\""))
+			if k == "os_distro" && v == "centos" {
+				return CENTOS
+			}
+		}
+	}
+	return OTHER
+}
+
+type Configuration struct {
+	Mac     string
+	IP      string
+	Mask    string
+	Gateway string
+	IsIPv6  bool
+}
+
+func GetSettingHistory() []Configuration {
+	configurations := []Configuration{}
+	if file, err := os.Open(configFile); err == nil {
+		defer file.Close()
+		decoder := json.NewDecoder(file)
+		decoder.Decode(&configurations)
+	}
+	return configurations
+
+}
+
+func AddSettingHistory(conf Configuration) {
+	configurations := GetSettingHistory()
+	found := false
+	for _, configuration := range configurations {
+		if configuration.Mac == conf.Mac && configuration.IsIPv6 == conf.IsIPv6 {
+			found = true
+		}
+	}
+	if !found {
+		configurations = append(configurations, conf)
+		if file, err := os.Create(configFile); err == nil {
+			defer file.Close()
+			encoder := json.NewEncoder(file)
+			encoder.Encode(configurations)
+		}
+	}
+}
+
+func GetHistoryByMac(mac string, isIPv6 bool) Configuration {
+	configurations := GetSettingHistory()
+	for _, configuration := range configurations {
+		if configuration.Mac == mac && configuration.IsIPv6 == isIPv6 {
+			return configuration
+		}
+	}
+	return Configuration{}
+}
+
+func RemoveHistoryByMac(mac string, isIPv6 bool) {
+	configurations := GetSettingHistory()
+	found := false
+	index := 0
+	for i, configuration := range configurations {
+		if configuration.Mac == mac && configuration.IsIPv6 == isIPv6 {
+			found = true
+			index = i
+		}
+	}
+
+	if found {
+		configurations = append(configurations[:index], configurations[index+1:]...)
+		if file, err := os.Create(configFile); err == nil {
+			defer file.Close()
+			encoder := json.NewEncoder(file)
+			encoder.Encode(configurations)
+		}
+	}
+}
+
+func (f *FeatureIPSetting) UnConfigStaticIP(vifKey string, mac string, isIPv6 bool, osType OSType) error {
+	f.logger.Printf("FeatureIPSetting Unset IP information for %s on OS %#v\n", vifKey, osType)
+
+	conf := GetHistoryByMac(mac, isIPv6)
+	if conf.Mac != mac && conf.IsIPv6 != isIPv6 {
+		f.logger.Printf("FeatureIPSetting Unset return\n")
+
+		return nil
+	}
+	// deconfig ip
+	RemoveHistoryByMac(mac, isIPv6)
+	return nil
+}
+
+func (f *FeatureIPSetting) ConfigStaticIP(vifKey string, mac string, isIPv6 bool, osType OSType) error {
+	addressKey := vifKey + addressSubKey
+	gatewatKey := vifKey + gatewaySubKey
+	if isIPv6 {
+		addressKey = vifKey + address6SubKey
+		gatewatKey = vifKey + gateway6SubKey
+	}
+
+	if address, err := f.Client.Read(addressKey); err == nil {
+		if ip, ipNet, err := net.ParseCIDR(address); err == nil {
+			switch osType {
+			case CENTOS:
+				f.logger.Printf("FeatureIPSetting Set IP %s MASK %s on Centos\n", ip.String(), ipNet.String())
+			default:
+				f.logger.Printf("FeatureIPSetting Set IP %s MASK %s on Other OS\n", ip.String(), ipNet.String())
+			}
+			AddSettingHistory(Configuration{Mac: mac, IsIPv6: isIPv6})
+		} else {
+			f.logger.Printf("FeatureIPSetting ParseCIDR [%s] failed with %s\n", address, err.Error())
+		}
+	} else {
+		f.logger.Printf("FeatureIPSetting Set IP failed with %s\n", err.Error())
+	}
+
+	if gateway, err := f.Client.Read(gatewatKey); err == nil {
+		if gatewayAddress := net.ParseIP(gateway); gatewayAddress != nil {
+			switch osType {
+			case CENTOS:
+				f.logger.Printf("FeatureIPSetting Set gateway with %s on Centos\n", gatewayAddress.String())
+			default:
+				f.logger.Printf("FeatureIPSetting Set gateway with %s on other OS\n", gatewayAddress.String())
+			}
+			AddSettingHistory(Configuration{Mac: mac, IsIPv6: isIPv6})
+		} else {
+			f.logger.Printf("FeatureIPSetting Invalid gateway %s\n", gateway)
+		}
+	} else {
+		f.logger.Printf("FeatureIPSetting Set gateway failed with %s\n", err.Error())
+	}
+	return nil
+}
+
 func (f *FeatureIPSetting) Run() error {
 	err := f.Client.Watch(controlKey, token)
 	if err != nil {
@@ -95,6 +252,7 @@ func (f *FeatureIPSetting) Run() error {
 
 	f.logger.Printf("Start watch on %#v\n", controlKey)
 	go func() {
+		osType := GetCurrentOSType()
 		ticker := time.Tick(4 * time.Second)
 		for {
 			f.Enable()
@@ -102,18 +260,34 @@ func (f *FeatureIPSetting) Run() error {
 				childrens := f.GetChildrens(controlKey)
 				for _, subkey := range childrens {
 					f.logger.Printf("Start checking key %s", subkey)
-					ipenabled := subkey + ipenabledSubKey
-					ipv6enabled := subkey + ipv6enabledSubKey
+					macKey := subkey + macSubKey
+					mac, err := f.Client.Read(macKey)
+					if err != nil {
+						f.logger.Printf("FeatureIPSetting get mac for %#v failed with %#v\n", macKey, err)
+						continue
+					}
 
-					if ipenabledValue, err := f.Client.Read(ipenabled); err == nil {
-						if ipenabledValue == "1" {
-							f.logger.Printf("FeatureIPSetting Set IPv4\n")
+					ipenabledKey := subkey + ipenabledSubKey
+					if ipenabled, err := f.Client.Read(ipenabledKey); err == nil {
+						if ipenabled == "1" {
+							f.ConfigStaticIP(subkey, mac, false, osType)
+						} else {
+							f.UnConfigStaticIP(subkey, mac, false, osType)
+						}
+						if err = f.Client.Rm(ipenabledKey); err != nil {
+							f.logger.Printf("FeatureIPSetting remove key %#v failed with %#v\n", ipenabledKey, err)
 						}
 					}
 
-					if ipv6enabledValue, err := f.Client.Read(ipv6enabled); err == nil {
-						if ipv6enabledValue == "1" {
-							f.logger.Printf("FeatureIPSetting Set IPv6\n")
+					ipv6enabledKey := subkey + ipv6enabledSubKey
+					if ipv6enabled, err := f.Client.Read(ipv6enabledKey); err == nil {
+						if ipv6enabled == "1" {
+							f.ConfigStaticIP(subkey, mac, true, osType)
+						} else {
+							f.UnConfigStaticIP(subkey, mac, true, osType)
+						}
+						if err = f.Client.Rm(ipv6enabledKey); err != nil {
+							f.logger.Printf("FeatureIPSetting remove key %#v failed with %#v\n", ipv6enabledKey, err)
 						}
 					}
 
