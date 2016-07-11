@@ -8,7 +8,6 @@ import (
 	"fmt"
 	"io"
 	"log"
-	"net"
 	"os"
 	"strings"
 	"time"
@@ -210,33 +209,25 @@ func (f *FeatureIPSetting) ConfigStaticIP(vifKey string, mac string, isIPv6 bool
 	}
 
 	if address, err := f.Client.Read(addressKey); err == nil {
-		if ip, ipNet, err := net.ParseCIDR(address); err == nil {
-			switch osType {
-			case CENTOS:
-				f.logger.Printf("FeatureIPSetting Set IP %s MASK %s on Centos\n", ip.String(), ipNet.String())
-			default:
-				f.logger.Printf("FeatureIPSetting Set IP %s MASK %s on Other OS\n", ip.String(), ipNet.String())
-			}
-			AddSettingHistory(Configuration{Mac: mac, IsIPv6: isIPv6})
-		} else {
-			f.logger.Printf("FeatureIPSetting ParseCIDR [%s] failed with %s\n", address, err.Error())
+		switch osType {
+		case CENTOS:
+			f.logger.Printf("FeatureIPSetting Set IP %s on Centos\n", address)
+		default:
+			f.logger.Printf("FeatureIPSetting Set IP %s on Other OS\n", address)
 		}
+		AddSettingHistory(Configuration{Mac: mac, IsIPv6: isIPv6})
 	} else {
 		f.logger.Printf("FeatureIPSetting Set IP failed with %s\n", err.Error())
 	}
 
 	if gateway, err := f.Client.Read(gatewatKey); err == nil {
-		if gatewayAddress := net.ParseIP(gateway); gatewayAddress != nil {
-			switch osType {
-			case CENTOS:
-				f.logger.Printf("FeatureIPSetting Set gateway with %s on Centos\n", gatewayAddress.String())
-			default:
-				f.logger.Printf("FeatureIPSetting Set gateway with %s on other OS\n", gatewayAddress.String())
-			}
-			AddSettingHistory(Configuration{Mac: mac, IsIPv6: isIPv6})
-		} else {
-			f.logger.Printf("FeatureIPSetting Invalid gateway %s\n", gateway)
+		switch osType {
+		case CENTOS:
+			f.logger.Printf("FeatureIPSetting Set gateway with %s on Centos\n", gateway)
+		default:
+			f.logger.Printf("FeatureIPSetting Set gateway with %s on other OS\n", gateway)
 		}
+		AddSettingHistory(Configuration{Mac: mac, IsIPv6: isIPv6})
 	} else {
 		f.logger.Printf("FeatureIPSetting Set gateway failed with %s\n", err.Error())
 	}
