@@ -52,7 +52,7 @@ func (f *mockFile) Close() error {
 }
 
 func TestXenStore(t *testing.T) {
-	xs, err := newXenstore(0, NewMockFile(t))
+	xs, err := newXenstore(0, NewMockFile(t), true)
 	if err != nil {
 		t.Errorf("newXenstore error: %#v\n", err)
 	}
@@ -68,7 +68,7 @@ func TestXenStore(t *testing.T) {
 }
 
 func TestXenStoreWatch2(t *testing.T) {
-	xs, err := newXenstore(0, NewMockFile(t))
+	xs, err := newXenstore(0, NewMockFile(t), false)
 	if err != nil {
 		t.Errorf("newXenstore error: %#v\n", err)
 	}

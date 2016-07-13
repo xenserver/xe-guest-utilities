@@ -126,7 +126,7 @@ type Configuration struct {
 	IsIPv6  bool
 }
 
-func GetSettingHistory() []Configuration {
+func getSettingHistory() []Configuration {
 	configurations := []Configuration{}
 	if file, err := os.Open(configFile); err == nil {
 		defer file.Close()
@@ -137,8 +137,8 @@ func GetSettingHistory() []Configuration {
 
 }
 
-func AddSettingHistory(conf Configuration) {
-	configurations := GetSettingHistory()
+func addSettingHistory(conf Configuration) {
+	configurations := getSettingHistory()
 	found := false
 	for _, configuration := range configurations {
 		if configuration.Mac == conf.Mac && configuration.IsIPv6 == conf.IsIPv6 {
@@ -155,8 +155,8 @@ func AddSettingHistory(conf Configuration) {
 	}
 }
 
-func GetHistoryByMac(mac string, isIPv6 bool) Configuration {
-	configurations := GetSettingHistory()
+func getHistoryByMac(mac string, isIPv6 bool) Configuration {
+	configurations := getSettingHistory()
 	for _, configuration := range configurations {
 		if configuration.Mac == mac && configuration.IsIPv6 == isIPv6 {
 			return configuration
@@ -165,8 +165,8 @@ func GetHistoryByMac(mac string, isIPv6 bool) Configuration {
 	return Configuration{}
 }
 
-func RemoveHistoryByMac(mac string, isIPv6 bool) {
-	configurations := GetSettingHistory()
+func removeHistoryByMac(mac string, isIPv6 bool) {
+	configurations := getSettingHistory()
 	found := false
 	index := 0
 	for i, configuration := range configurations {
@@ -189,14 +189,14 @@ func RemoveHistoryByMac(mac string, isIPv6 bool) {
 func (f *FeatureIPSetting) UnConfigStaticIP(vifKey string, mac string, isIPv6 bool, osType OSType) error {
 	f.logger.Printf("FeatureIPSetting Unset IP information for %s on OS %#v\n", vifKey, osType)
 
-	conf := GetHistoryByMac(mac, isIPv6)
+	conf := getHistoryByMac(mac, isIPv6)
 	if conf.Mac != mac && conf.IsIPv6 != isIPv6 {
 		f.logger.Printf("FeatureIPSetting Unset return\n")
 
 		return nil
 	}
 	// deconfig ip
-	RemoveHistoryByMac(mac, isIPv6)
+	removeHistoryByMac(mac, isIPv6)
 	return nil
 }
 
@@ -215,7 +215,7 @@ func (f *FeatureIPSetting) ConfigStaticIP(vifKey string, mac string, isIPv6 bool
 		default:
 			f.logger.Printf("FeatureIPSetting Set IP %s on Other OS\n", address)
 		}
-		AddSettingHistory(Configuration{Mac: mac, IsIPv6: isIPv6})
+		addSettingHistory(Configuration{Mac: mac, IsIPv6: isIPv6})
 	} else {
 		f.logger.Printf("FeatureIPSetting Set IP failed with %s\n", err.Error())
 	}
@@ -227,7 +227,7 @@ func (f *FeatureIPSetting) ConfigStaticIP(vifKey string, mac string, isIPv6 bool
 		default:
 			f.logger.Printf("FeatureIPSetting Set gateway with %s on other OS\n", gateway)
 		}
-		AddSettingHistory(Configuration{Mac: mac, IsIPv6: isIPv6})
+		addSettingHistory(Configuration{Mac: mac, IsIPv6: isIPv6})
 	} else {
 		f.logger.Printf("FeatureIPSetting Set gateway failed with %s\n", err.Error())
 	}
