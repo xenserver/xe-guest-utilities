@@ -35,6 +35,7 @@ GO_SOURCE_REPO = $(call git_loc,xe-guest-utilities)
 XE_DAEMON_GO_SOURCES :=
 XE_DAEMON_GO_SOURCES += ./xe-daemon/xe-daemon.go  # this should be the first one
 XE_DAEMON_GO_SOURCES += ./syslog/syslog.go
+XE_DAEMON_GO_SOURCES += ./system/system.go
 XE_DAEMON_GO_SOURCES += ./guestmetric/guestmetric.go
 XE_DAEMON_GO_SOURCES += ./guestmetric/guestmetric_linux.go
 XE_DAEMON_GO_SOURCES += ./xenstoreclient/xenstore.go

@@ -30,6 +30,7 @@ endif
 XE_DAEMON_SOURCES :=
 XE_DAEMON_SOURCES += ./xe-daemon/xe-daemon.go
 XE_DAEMON_SOURCES += ./syslog/syslog.go
+XE_DAEMON_SOURCES += ./system/system.go
 XE_DAEMON_SOURCES += ./guestmetric/guestmetric.go
 XE_DAEMON_SOURCES += ./guestmetric/guestmetric_linux.go
 XE_DAEMON_SOURCES += ./xenstoreclient/xenstore.go
