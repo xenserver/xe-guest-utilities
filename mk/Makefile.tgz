@@ -116,7 +116,7 @@ $(TGZ_BUILT_COOKIE): $(SOURCES)
 	  install -d $(DESTDIR)/usr/share/doc/$(PACKAGE)_$(VERSION)/ ; \
 	  install -m 644 $(REPO)/LICENSE $(DESTDIR)/usr/share/doc/$(PACKAGE)_$(VERSION)/LICENSE ; \
 	  cd $(DESTDIR) ; \
-	  tar cvf $(MY_OBJ_DIR)/$(PACKAGE)_$(VERSION)-$(RELEASE)_all.tgz * \
+	  tar czvf $(MY_OBJ_DIR)/$(PACKAGE)_$(VERSION)-$(RELEASE)_all.tgz * \
 	)>$@
 
 $(MY_SOURCES)/MANIFEST: $(MY_SOURCES_DIRSTAMP)

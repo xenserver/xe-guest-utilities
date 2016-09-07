@@ -6,7 +6,7 @@ Standards-Version: 3.7.2
 Build-Depends: debhelper (>= 4.0.0)
 
 Package: xe-guest-utilities
-Architecture: all
+Architecture: any
 Conflicts: xengmond
 Replaces: xengmond
 Description: @BRAND_GUEST@ Monitoring Scripts
