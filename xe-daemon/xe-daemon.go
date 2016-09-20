@@ -105,7 +105,9 @@ func main() {
 		updated := false
 		for _, collector := range collectors {
 			if count%collector.divisor == 0 {
-				logger.Printf("Running %s ...\n", collector.name)
+				if *debugFlag {
+					logger.Printf("Running %s ...\n", collector.name)
+				}
 				result, err := collector.Collect()
 				if err != nil {
 					logger.Printf("%s error: %#v\n", collector.name, err)

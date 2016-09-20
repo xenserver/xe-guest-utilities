@@ -30,7 +30,7 @@ DESTDIR := $(MY_OBJ_DIR)/$(PACKAGE)/
 GOTARBALL = /distfiles/golang/go1.4.2.linux-386.tar.gz
 GOROOT = $(MY_OBJ_DIR)/go
 GOBIN = GOROOT=$(GOROOT) $(GOROOT)/bin/go
-GOFLAGS = -v
+GOFLAGS = -v -ldflags="-s -w"
 GOBUILDDIR = $(MY_OBJ_DIR)/gobuild
 
 GO_SOURCE_REPO = $(call git_loc,xe-guest-utilities)
@@ -116,7 +116,7 @@ $(TGZ_BUILT_COOKIE): $(SOURCES)
 	  install -d $(DESTDIR)/usr/share/doc/$(PACKAGE)_$(VERSION)/ ; \
 	  install -m 644 $(REPO)/LICENSE $(DESTDIR)/usr/share/doc/$(PACKAGE)_$(VERSION)/LICENSE ; \
 	  cd $(DESTDIR) ; \
-	  tar cvf $(MY_OBJ_DIR)/$(PACKAGE)_$(VERSION)-$(RELEASE)_all.tgz * \
+	  tar czvf $(MY_OBJ_DIR)/$(PACKAGE)_$(VERSION)-$(RELEASE)_all.tgz * \
 	)>$@
 
 $(MY_SOURCES)/MANIFEST: $(MY_SOURCES_DIRSTAMP)

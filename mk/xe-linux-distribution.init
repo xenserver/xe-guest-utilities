@@ -80,7 +80,10 @@ start()
 
 stop()
 {
+    [ ! -f "${XE_DAEMON_PIDFILE}" ] && return 0
     action $"Stopping xe daemon: "   kill -TERM $(cat ${XE_DAEMON_PIDFILE})
+    rm -f "${XE_DAEMON_PIDFILE}"
+    return 0
 }
 
 status()

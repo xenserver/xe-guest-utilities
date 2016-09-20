@@ -27,7 +27,7 @@ SRPM= xe-guest-utilities-$(VERSION)-$(RELEASE).src.rpm
 GOTARBALL = /distfiles/golang/go1.4.2.linux-386.tar.gz
 GOROOT = $(MY_OBJ_DIR)/go
 GOBIN = GOROOT=$(GOROOT) $(GOROOT)/bin/go
-GOFLAGS = -a -x
+GOFLAGS = -a -x -ldflags="-s -w"
 GOBUILDDIR = $(MY_OBJ_DIR)/gobuild
 
 GO_SOURCE_REPO = $(call git_loc,xe-guest-utilities)
