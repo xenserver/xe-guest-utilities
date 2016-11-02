@@ -276,6 +276,36 @@ identify_lsb()
     write_to_output "${distro}" "${major}" "${minor}" "${description}"
 }
 
+identify_kylin()
+{
+    kylin_release="$1"
+    local distro
+    local major
+    local minor
+
+    # distro
+    # NeoKylin Linux Advanced Server release 6.5 (Berryllium)
+    # NeoKylin Linux Advanced Server release 7.0
+
+    if [ ! -f "${kylin_release}" ] ; then
+	return 1
+    fi
+
+    eval $(sed -n -e \
+              's/^NeoKylin Linux Advanced Server release \([0-9]*\)\.\([0-9]*\) (.*)$/distro=neokylin;major=\1;minor=\2;/gp;' \
+              "${kylin_release}")
+
+    if [ -z "${major}" -o -z "${distro}" ] ; then
+        return 1
+    fi
+
+    if [ -z "${minor}" ] ; then
+        minor=0
+    fi
+
+    write_to_output "${distro}" "${major}" "${minor}" "$(head -n 1 ${kylin_release})"
+}
+
 identify_boot2docker()
 {
     boot2docker_release="$1"
@@ -298,6 +328,8 @@ if [ $# -eq 1 ] ; then
 fi
 
 if [ -z "${TEST}" ] ; then
+    #identify kylin disto before redhat, as kylin has both kylin_release and redhat_release.
+    identify_kylin  /etc/neokylin-release  && exit 0
     identify_redhat /etc/oracle-release && exit 0
     identify_redhat /etc/enterprise-release && exit 0
     identify_redhat /etc/centos-release && exit 0
