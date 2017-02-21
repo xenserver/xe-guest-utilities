@@ -461,9 +461,14 @@ func (xs *XenStore) StopWatch() error {
 	return nil
 }
 
+type Content struct {
+	value     string
+	keepalive bool
+}
+
 type CachedXenStore struct {
 	xs         XenStoreClient
-	writeCache map[string]string
+	writeCache map[string]Content
 }
 
 func NewCachedXenstore(tx uint32) (XenStoreClient, error) {
@@ -473,17 +478,19 @@ func NewCachedXenstore(tx uint32) (XenStoreClient, error) {
 	}
 	return &CachedXenStore{
 		xs:         xs,
-		writeCache: make(map[string]string, 0),
+		writeCache: make(map[string]Content, 0),
 	}, nil
 }
 
 func (xs *CachedXenStore) Write(path string, value string) error {
-	if v, ok := xs.writeCache[path]; ok && v == value {
+	if v, ok := xs.writeCache[path]; ok && v.value == value {
+		v.keepalive = true
+		xs.writeCache[path] = v
 		return nil
 	}
 	err := xs.xs.Write(path, value)
 	if err == nil {
-		xs.writeCache[path] = value
+		xs.writeCache[path] = Content{value: value, keepalive: true}
 	}
 	return err
 }
@@ -529,7 +536,24 @@ func (xs *CachedXenStore) StopWatch() error {
 }
 
 func (xs *CachedXenStore) Clear() {
-	xs.writeCache = make(map[string]string, 0)
+	xs.writeCache = make(map[string]Content, 0)
+}
+
+func (xs *CachedXenStore) InvalidCacheFlush() error {
+	for key, value := range xs.writeCache {
+		if value.keepalive {
+			value.keepalive = false
+			xs.writeCache[key] = value
+		} else {
+			err := xs.Rm(key)
+			if err != nil {
+				return err
+			} else {
+				delete(xs.writeCache, key)
+			}
+		}
+	}
+	return nil
 }
 
 func getDevPath() (devPath string, err error) {
