@@ -18,7 +18,10 @@ import (
 )
 
 const (
-	LoggerName string = "xe-daemon"
+	LoggerName           string = "xe-daemon"
+	DivisorOne           int    = 1
+	DivisorTwo           int    = 2
+	DivisorLeastMultiple int    = 2 // The least common multiple, ensure every collector done before executing InvalidCacheFlush.
 )
 
 func main() {
@@ -75,11 +78,11 @@ func main() {
 		name    string
 		Collect func() (guestmetric.GuestMetric, error)
 	}{
-		{1, "CollectOS", collector.CollectOS},
-		{1, "CollectMisc", collector.CollectMisc},
-		{1, "CollectNetworkAddr", collector.CollectNetworkAddr},
-		{1, "CollectDisk", collector.CollectDisk},
-		{2, "CollectMemory", collector.CollectMemory},
+		{DivisorOne, "CollectOS", collector.CollectOS},
+		{DivisorOne, "CollectMisc", collector.CollectMisc},
+		{DivisorOne, "CollectNetworkAddr", collector.CollectNetworkAddr},
+		{DivisorOne, "CollectDisk", collector.CollectDisk},
+		{DivisorTwo, "CollectMemory", collector.CollectMemory},
 	}
 
 	lastUniqueID, err := xs.Read("unique-domain-id")
@@ -122,6 +125,14 @@ func main() {
 							}
 							updated = true
 						}
+					}
+				}
+			}
+			if count%DivisorLeastMultiple == 0 {
+				if cx, ok := xs.(*xenstoreclient.CachedXenStore); ok {
+					err := cx.InvalidCacheFlush()
+					if err != nil {
+						logger.Printf("InvalidCacheFlush error: %#v\n", err)
 					}
 				}
 			}
