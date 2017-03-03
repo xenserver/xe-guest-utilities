@@ -128,12 +128,12 @@ func main() {
 					}
 				}
 			}
-			if count%DivisorLeastMultiple == 0 {
-				if cx, ok := xs.(*xenstoreclient.CachedXenStore); ok {
-					err := cx.InvalidCacheFlush()
-					if err != nil {
-						logger.Printf("InvalidCacheFlush error: %#v\n", err)
-					}
+		}
+		if count%DivisorLeastMultiple == 0 {
+			if cx, ok := xs.(*xenstoreclient.CachedXenStore); ok {
+				err := cx.InvalidCacheFlush()
+				if err != nil {
+					logger.Printf("InvalidCacheFlush error: %#v\n", err)
 				}
 			}
 		}

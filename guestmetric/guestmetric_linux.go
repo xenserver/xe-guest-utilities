@@ -79,26 +79,31 @@ func EnumNetworkAddresses(iface string) (GuestMetric, error) {
 	const (
 		IP_RE   string = `(\d{1,3}\.){3}\d{1,3}`
 		IPV6_RE string = `[\da-f:]+[\da-f]`
+		MAC_RE  string = `[\da-fA-F:]+`
 	)
 
 	var (
+		IP_MAC_ADDR_RE        = regexp.MustCompile(`link\/ether\s*(` + MAC_RE + `)`)
 		IP_IPV4_ADDR_RE       = regexp.MustCompile(`inet\s*(` + IP_RE + `).*\se[a-zA-Z0-9]+[\s\n]`)
 		IP_IPV6_ADDR_RE       = regexp.MustCompile(`inet6\s*(` + IPV6_RE + `)`)
 		IFCONFIG_IPV4_ADDR_RE = regexp.MustCompile(`inet addr:\s*(` + IP_RE + `)`)
 		IFCONFIG_IPV6_ADDR_RE = regexp.MustCompile(`inet6 addr:\s*(` + IPV6_RE + `)`)
+		IFCONFIG_MAC_ADDR_RE  = regexp.MustCompile(`HWaddr\s*(` + MAC_RE + `)`)
 	)
 
 	d := make(GuestMetric, 0)
 
-	var v4re, v6re *regexp.Regexp
+	var v4re, v6re, macre *regexp.Regexp
 	var out string
 	var err error
 	if out, err = runCmd("ip", "addr", "show", iface); err == nil {
 		v4re = IP_IPV4_ADDR_RE
 		v6re = IP_IPV6_ADDR_RE
+		macre = IP_MAC_ADDR_RE
 	} else if out, err = runCmd("ifconfig", iface); err == nil {
 		v4re = IFCONFIG_IPV4_ADDR_RE
 		v6re = IFCONFIG_IPV6_ADDR_RE
+		macre = IFCONFIG_MAC_ADDR_RE
 	} else {
 		return nil, fmt.Errorf("Cannot find ip/ifconfig command")
 	}
@@ -113,6 +118,13 @@ func EnumNetworkAddresses(iface string) (GuestMetric, error) {
 	if m != nil {
 		for i, parts := range m {
 			d[fmt.Sprintf("ipv6/%d/addr", i)] = parts[1]
+		}
+	}
+
+	m = macre.FindAllStringSubmatch(out, -1)
+	if m != nil {
+		for i, parts := range m {
+			d[fmt.Sprintf("mac/%d", i)] = parts[1]
 		}
 	}
 	return d, nil
