@@ -11,10 +11,12 @@ TEST=yes
 test_identify()
 {
     export TESTCASE=$1
-    identify_lsb    testcases/lsb || \
-    identify_debian "${1}" || \
-    identify_redhat "${1}" || \
-    identify_sles   "${1}" || \
+    identify_lsb     testcases/lsb || \
+    identify_alpine  "${1}" || \
+    identify_debian  "${1}" || \
+    identify_redhat  "${1}" || \
+    identify_sles    "${1}" || \
+
     return 1
 }
 
@@ -78,5 +80,6 @@ do_test "testcases/lsb-ubuntu-7.04"      "ubuntu 7 04"
 do_test "testcases/oracle-5"             "oracle 5 0"
 do_test "testcases/oracle-5u1"           "oracle 5 1"
 do_test "testcases/lsb-coreos-367.1.0"   "coreos 367 1.0"
+do_test "testcases/alpine-release"       "alpine 3 5"
 
 exit 0

@@ -323,6 +323,31 @@ identify_boot2docker()
 
 }
 
+identify_alpine()
+{
+    alpine_release="$1"
+    local major
+    local minor
+
+    if [ ! -f "${alpine_release}" ] ; then
+        return 1
+    fi
+
+    eval $(sed -n \
+               -e 's/^\([0-9]*\)\.\([0-9]*\)\.[0-9]*.*$/major=\1;minor=\2/gp;' \
+                         "${alpine_release}")
+
+    if [ -z "${major}" ] ; then
+        return 1
+    fi
+
+    if [ -z "${minor}" ] ; then
+        minor=0
+    fi
+
+    write_to_output "alpine" "${major}" "${minor}" "Alpinelinux $(head -n 1 $alpine_release)"
+}
+
 if [ $# -eq 1 ] ; then
     exec 1>"$1"
 fi
@@ -338,6 +363,7 @@ if [ -z "${TEST}" ] ; then
     identify_lsb    lsb_release         && exit 0
     identify_debian /etc/debian_version && exit 0
     identify_boot2docker /etc/boot2docker && exit 0
+    identify_alpine /etc/alpine-release && exit 0
 
     if [ $# -eq 1 ] ; then
 	rm -f "$1"
