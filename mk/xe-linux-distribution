@@ -292,7 +292,7 @@ identify_kylin()
     fi
 
     eval $(sed -n -e \
-              's/^NeoKylin Linux Advanced Server release V*\([0-9]*\)\D*\([0-9]*\).*$/distro=neokylin;major=\1;minor=\2;/gp;' \
+              's/^NeoKylin Linux Advanced Server release V*\([0-9]*\)\\D*\([0-9]*\).*$/distro=neokylin;major=\1;minor=\2;/gp;' \
               "${kylin_release}")
 
     if [ -z "${major}" -o -z "${distro}" ] ; then
