@@ -84,7 +84,7 @@ if [ -d /etc/yum.repos.d ] && [ -n "${os_distro}" ] && [ -n "${os_majorver}" ] ;
         if [ -f /etc/yum.repos.d/XenSource.repo ] ; then
             rm -f /etc/yum.repos.d/XenSource.repo # contains deprecated urls
         fi
-        sed -e "s/@DISTRO@/${distro}/g" \
+        sed -e "s/\^DISTRO\^/${distro}/g" \
             < /usr/share/doc/%{name}-%{version}/examples/Citrix.repo \
             > /etc/yum.repos.d/Citrix.repo
         ;;
