@@ -12,7 +12,7 @@ if [ X"$1" = X"configure" ] ; then
 	esac
 	if [ -n "${distro}" ] ; then
             rm -f /etc/apt/sources.list.d/xensource.list # contains deprecated urls
-	    sed -e "s/@DISTRO@/${distro}/g" \
+	    sed -e "s/\^DISTRO\^/${distro}/g" \
 		< /usr/share/xe-guest-utilities/citrix.list \
 		> /etc/apt/sources.list.d/citrix.list
 	fi

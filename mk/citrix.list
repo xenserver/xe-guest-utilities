@@ -1,2 +1,2 @@
-deb     http://updates.vmd.citrix.com/@PRODUCT_BRAND@/@PRODUCT_VERSION@/debian/ @DISTRO@ main
-deb-src http://updates.vmd.citrix.com/@PRODUCT_BRAND@/@PRODUCT_VERSION@/debian/ @DISTRO@ main
+deb     http://updates.vmd.citrix.com/@PRODUCT_BRAND@/@PRODUCT_VERSION@/debian/ ^DISTRO^ main
+deb-src http://updates.vmd.citrix.com/@PRODUCT_BRAND@/@PRODUCT_VERSION@/debian/ ^DISTRO^ main

@@ -1,7 +1,7 @@
 [citrix]
-name=@PRODUCT_BRAND@ @PRODUCT_VERSION@ updates for @DISTRO@
-mirrorlist=http://updates.vmd.citrix.com/@PRODUCT_BRAND@/@PRODUCT_VERSION@/@DISTRO@/mirrorlist
-#baseurl=http://updates.vmd.citrix.com/@PRODUCT_BRAND@/@PRODUCT_VERSION@/@DISTRO@/
+name=@PRODUCT_BRAND@ @PRODUCT_VERSION@ updates for ^DISTRO^
+mirrorlist=http://updates.vmd.citrix.com/@PRODUCT_BRAND@/@PRODUCT_VERSION@/^DISTRO^/mirrorlist
+#baseurl=http://updates.vmd.citrix.com/@PRODUCT_BRAND@/@PRODUCT_VERSION@/^DISTRO^/
 gpgcheck=1
 gpgkey=http://updates.vmd.citrix.com/@PRODUCT_BRAND@/RPM-GPG-KEY-@PRODUCT_VERSION@
 enabled=1
