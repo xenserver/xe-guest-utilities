@@ -201,16 +201,15 @@ func (c *Collector) CollectDisk() (GuestMetric, error) {
 			real_dev := ""
 			if c.Client != nil {
 				nodename, err := readSysfs(fmt.Sprintf("/sys/block/%s/device/nodename", disk))
-				if err != nil {
-					return nil, err
-				}
-				backend, err := c.Client.Read(fmt.Sprintf("%s/backend", nodename))
-				if err != nil {
-					return nil, err
-				}
-				real_dev, err = c.Client.Read(fmt.Sprintf("%s/dev", backend))
-				if err != nil {
-					return nil, err
+				if err == nil {
+					backend, err := c.Client.Read(fmt.Sprintf("%s/backend", nodename))
+					if err != nil {
+						return nil, err
+					}
+					real_dev, err = c.Client.Read(fmt.Sprintf("%s/dev", backend))
+					if err != nil {
+						return nil, err
+					}
 				}
 			}
 			name := path
