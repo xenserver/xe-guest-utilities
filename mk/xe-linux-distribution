@@ -135,8 +135,10 @@ identify_redhat()
 	return 1
     fi
 
+    eval $(sed -nr \
+               's/^(.*) DDK release ([^-]*)(-(.*))? (.*)$/distro=xe-ddk;major=\2;minor=\4/gp;' \
+                         "${redhat_release}")
     eval $(sed -n \
-               -e 's/^\(.*\) DDK release \(.*\)-\(.*\) (.*)$/distro=xe-ddk;major=\2;minor=\3/gp;' \
                -e 's/^\(.*\) SDK release \(.*\)-\(.*\) (.*)$/distro=xe-sdk;major=\2;minor=\3/gp;' \
                -e 's/^Red Hat Enterprise Linux.* release \([0-9]*\) (.* Update \(.*\))$/distro=rhel;major=\1;minor=\2/gp;'\
                -e 's/^Red Hat Enterprise Linux.* release \([0-9]*\) (.*)$/distro=rhel;major=\1/gp;' \
