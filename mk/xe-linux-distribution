@@ -340,6 +340,35 @@ identify_asianux()
     write_to_output "${distro}" "${major}" "${minor}" "$(head -n 1 ${asianux_release})"
 }
 
+identify_turbo()
+{
+    turbo_release="$1"
+    local distro
+    local major
+    local minor
+
+    # distro
+    # GreatTurbo Enterprise Server release 12.2 (Theseus)
+
+    if [ ! -f "${turbo_release}" ] ; then
+	return 1
+    fi
+
+    eval $(sed -rn \
+              's/^GreatTurbo[^0-9]*([0-9]*)\.?([0-9]*)?.*$/distro=turbo;major=\1;minor=\2;/gp;' \
+              "${turbo_release}")
+
+    if [ -z "${major}" -o -z "${distro}" ] ; then
+        return 1
+    fi
+
+    if [ -z "${minor}" ] ; then
+        minor=0
+    fi
+
+    write_to_output "${distro}" "${major}" "${minor}" "$(head -n 1 ${turbo_release})"
+}
+
 identify_boot2docker()
 {
     boot2docker_release="$1"
@@ -364,6 +393,7 @@ fi
 if [ -z "${TEST}" ] ; then
     #identify kylin disto before redhat, as kylin has both kylin_release and redhat_release.
     identify_asianux /etc/asianux-release && exit 0
+    identify_turbo /etc/turbo-release && exit 0
     identify_kylin  /etc/neokylin-release  && exit 0
     identify_redhat /etc/oracle-release && exit 0
     identify_redhat /etc/enterprise-release && exit 0
