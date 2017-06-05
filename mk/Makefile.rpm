@@ -39,6 +39,7 @@ XE_DAEMON_GO_SOURCES += ./system/system.go
 XE_DAEMON_GO_SOURCES += ./guestmetric/guestmetric.go
 XE_DAEMON_GO_SOURCES += ./guestmetric/guestmetric_linux.go
 XE_DAEMON_GO_SOURCES += ./xenstoreclient/xenstore.go
+XE_DAEMON_GO_SOURCES += ./feature/FeatureIPSetting.go
 
 XENSTORE_GO_SOURCES :=
 XENSTORE_GO_SOURCES += ./xenstore/xenstore.go  # this should be the first one

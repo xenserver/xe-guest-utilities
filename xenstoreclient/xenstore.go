@@ -71,6 +71,7 @@ type XenStoreClient interface {
 	WatchEvent(key string) (token string, ok bool)
 	UnWatch(path string, token string) error
 	StopWatch() error
+	Directory(path string) (string, error)
 }
 
 func ReadPacket(r io.Reader) (packet *Packet, err error) {
@@ -158,7 +159,22 @@ func (wq *WatchQueueManager) RemoveByKey(key string) {
 func (wq *WatchQueueManager) SetEventByKey(key string, token string) (ok bool) {
 	wq.rwlocker.RLock()
 	defer wq.rwlocker.RUnlock()
-	wq.watchQueues[key] <- token
+	useCurrentKey := false
+	parentKey := ""
+	for k := range wq.watchQueues {
+		if key == k {
+			useCurrentKey = true
+			break
+		} else if strings.HasPrefix(key, k) {
+			parentKey = k
+			break
+		}
+	}
+	if useCurrentKey {
+		wq.watchQueues[key] <- token
+	} else if parentKey != "" {
+		wq.watchQueues[parentKey] <- token
+	}
 	return
 }
 
@@ -177,7 +193,17 @@ func (wq *WatchQueueManager) GetEventByKey(key string) (token string, ok bool) {
 func (wq *WatchQueueManager) AddChanByKey(key string) {
 	wq.rwlocker.Lock()
 	defer wq.rwlocker.Unlock()
+	for k := range wq.watchQueues {
+		if key == k {
+			return
+		}
+	}
 	wq.watchQueues[key] = make(chan string, 100)
+}
+
+type QueueResponse struct {
+	packet []byte
+	err    error
 }
 
 type XenStore struct {
@@ -189,7 +215,7 @@ type XenStore struct {
 	watchQueue         WatchQueueManager
 	watchStopChan      chan struct{}
 	watchStoppedChan   chan struct{}
-	nonWatchQueue      chan []byte
+	nonWatchQueue      chan QueueResponse
 	xbFileReaderLocker *sync.Mutex
 	logger             *log.Logger
 }
@@ -254,21 +280,50 @@ func (xs *XenStore) DO(req *Packet) (resp *Packet, err error) {
 		return nil, err
 	}
 
-	var r io.Reader
-	if xs.nonWatchQueue != nil {
-		data := <-xs.nonWatchQueue
-		r = bytes.NewReader(data)
-	} else {
-		r = xs.xbFileReader
+	for {
+		var r io.Reader
+		if xs.nonWatchQueue != nil {
+			data := <-xs.nonWatchQueue
+			r = bytes.NewReader(data.packet)
+			err = data.err
+		} else {
+			r = xs.xbFileReader
+		}
+
+		if err != nil {
+			return nil, err
+		}
+
+		resp, err = ReadPacket(r)
+		if resp.OpCode == XS_WATCH_EVENT {
+			//watch event should never go into Do as a response. Ignore the package
+			continue
+		}
+		return resp, err
 	}
-	resp, err = ReadPacket(r)
-	return resp, err
+
 }
 
 func (xs *XenStore) Read(path string) (string, error) {
 	v := []byte(path + "\x00")
 	req := &Packet{
 		OpCode: XS_READ,
+		Req:    0,
+		TxID:   xs.tx,
+		Length: uint32(len(v)),
+		Value:  v,
+	}
+	resp, err := xs.DO(req)
+	if err != nil {
+		return "", err
+	}
+	return string(resp.Value), nil
+}
+
+func (xs *XenStore) Directory(path string) (string, error) {
+	v := []byte(path + "\x00")
+	req := &Packet{
+		OpCode: XS_DIRECTORY,
 		Req:    0,
 		TxID:   xs.tx,
 		Length: uint32(len(v)),
@@ -376,11 +431,16 @@ func (xs *XenStore) UnWatch(path string, token string) (err error) {
 
 func (xs *XenStore) Watch(path string, token string) error {
 	watcher := func() {
-		xs.logger.Printf("Watch: Start")
+		xs.logger.Printf("Watch: Start to use watch")
 		type XSData struct {
 			*Packet
 			Error error
 		}
+
+		//Lock non WatchQueue to avoid the miss use in DO
+		xs.xbFileReaderLocker.Lock()
+		xs.nonWatchQueue = make(chan QueueResponse, 100)
+		xs.xbFileReaderLocker.Unlock()
 
 		xsDataChan := make(chan XSData, 100)
 		xsReadStop := make(chan bool)
@@ -388,20 +448,17 @@ func (xs *XenStore) Watch(path string, token string) error {
 			for {
 				// The read will return at once if no data in r
 				p, err := ReadPacket(r)
-				ticker := time.Tick(1 * time.Second)
-				if err != nil {
-					select {
-					case <-c:
-						return
-					case <-ticker:
-						continue
-					}
-				}
 				out <- XSData{Packet: p, Error: err}
+				ticker := time.Tick(1 * time.Microsecond)
+				select {
+				case <-c:
+					return
+				case <-ticker:
+					continue
+				}
 			}
 		}(xs.xbFileReader, xsDataChan, xsReadStop)
 
-		xs.nonWatchQueue = make(chan []byte, 100)
 		for {
 			select {
 			case <-xs.watchStopChan:
@@ -411,21 +468,19 @@ func (xs *XenStore) Watch(path string, token string) error {
 				return
 			case xsdata := <-xsDataChan:
 				if xsdata.Error != nil {
-					xs.logger.Printf("Watch: receive error: %#v", xsdata.Error)
-					return
-				}
-				switch xsdata.Packet.OpCode {
-				case XS_WATCH_EVENT:
-					parts := strings.SplitN(string(xsdata.Value), "\x00", 2)
-					path := parts[0]
-					token := parts[1]
-					xs.logger.Printf("Get XS_WATCH_EVENT key:%s, token:%s\n", path, token)
-					xs.watchQueue.SetEventByKey(path, token)
-				default:
-					xs.logger.Printf("Get non watch event %#v\n", xsdata.Packet.OpCode)
-					var b bytes.Buffer
-					xsdata.Packet.Write(&b)
-					xs.nonWatchQueue <- b.Bytes()
+					xs.nonWatchQueue <- QueueResponse{packet: nil, err: xsdata.Error}
+				} else {
+					switch xsdata.Packet.OpCode {
+					case XS_WATCH_EVENT:
+						parts := strings.SplitN(string(xsdata.Value), "\x00", 2)
+						path := parts[0]
+						token := parts[1]
+						xs.watchQueue.SetEventByKey(path, token)
+					default:
+						var b bytes.Buffer
+						xsdata.Packet.Write(&b)
+						xs.nonWatchQueue <- QueueResponse{packet: b.Bytes(), err: xsdata.Error}
+					}
 				}
 			}
 		}
@@ -507,6 +562,10 @@ func (xs *CachedXenStore) Read(path string) (string, error) {
 	return xs.xs.Read(path)
 }
 
+func (xs *CachedXenStore) Directory(path string) (string, error) {
+	return xs.xs.Directory(path)
+}
+
 func (xs *CachedXenStore) Mkdir(path string) error {
 	return xs.xs.Mkdir(path)
 }
@@ -558,7 +617,6 @@ func (xs *CachedXenStore) InvalidCacheFlush() error {
 
 func getDevPath() (devPath string, err error) {
 	devPaths := []string{
-		"/proc/xen/xenbus",
 		"/dev/xen/xenbus",
 		"/kern/xen/xenbus",
 	}
