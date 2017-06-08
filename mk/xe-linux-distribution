@@ -369,6 +369,68 @@ identify_turbo()
     write_to_output "${distro}" "${major}" "${minor}" "$(head -n 1 ${turbo_release})"
 }
 
+identify_linx()
+{
+    linx_release="$1"
+    local distro
+    local major
+    local minor
+
+    # distro
+    # '6.0.60.4' corresponds to Linx Linux 6
+    # '6.0.80' corresponds to Linx Linux 8
+    
+
+    if [ ! -f "${linx_release}" ] ; then
+	return 1
+    fi
+
+    eval $(sed -rn \
+              's/^6.0.([0-9])0.*$/distro=linx;major=\1;minor=0;/gp;' \
+              "${linx_release}")
+
+    if [ -z "${major}" -o -z "${distro}" ] ; then
+        return 1
+    fi
+
+    if [ -z "${minor}" ] ; then
+        minor=0
+    fi
+    
+    linx_osname="Linx Linux ${major}.${minor}"
+    write_to_output "${distro}" "${major}" "${minor}" "${linx_osname}"
+}
+
+identify_yinhe()
+{
+    yinhe_release="$1"
+    local distro
+    local major
+    local minor
+
+    # distro
+    # Kylin 4.0
+
+    if [ ! -f "${yinhe_release}" ] ; then
+	return 1
+    fi
+
+    eval $(sed -rn \
+              's/^Kylin ([0-9]).([0-9])$/distro=yinhe;major=\1;minor=\2;/gp;' \
+              "${yinhe_release}")
+
+    if [ -z "${major}" -o -z "${distro}" ] ; then
+        return 1
+    fi
+
+    if [ -z "${minor}" ] ; then
+        minor=0
+    fi
+    
+    yinhe_osname="Yinhe Kylin Linux ${major}.${minor}"
+    write_to_output "${distro}" "${major}" "${minor}" "${yinhe_osname}"
+}
+
 identify_boot2docker()
 {
     boot2docker_release="$1"
@@ -400,6 +462,9 @@ if [ -z "${TEST}" ] ; then
     identify_redhat /etc/centos-release && exit 0
     identify_redhat /etc/redhat-release && exit 0
     identify_sles   /etc/SuSE-release   && exit 0
+    #identify Linx disto before debian, as Linx has both linx_release and debian_version.
+    identify_yinhe   /etc/kylin-build   && exit 0
+    identify_linx   /etc/linx-release   && exit 0
     identify_lsb    lsb_release         && exit 0
     identify_debian /etc/debian_version && exit 0
     identify_boot2docker /etc/boot2docker && exit 0
