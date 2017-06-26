@@ -75,74 +75,90 @@ func (c *Collector) CollectMemory() (GuestMetric, error) {
 	return prefixKeys("data/", current), nil
 }
 
-func EnumNetworkAddresses(iface string) (GuestMetric, error) {
+func enumNetworkAddresses(iface string) (GuestMetric, error) {
 	const (
 		IP_RE   string = `(\d{1,3}\.){3}\d{1,3}`
 		IPV6_RE string = `[\da-f:]+[\da-f]`
-		MAC_RE  string = `[\da-fA-F:]+`
 	)
 
 	var (
-		IP_MAC_ADDR_RE        = regexp.MustCompile(`link\/ether\s*(` + MAC_RE + `)`)
 		IP_IPV4_ADDR_RE       = regexp.MustCompile(`inet\s*(` + IP_RE + `).*\se[a-zA-Z0-9]+[\s\n]`)
 		IP_IPV6_ADDR_RE       = regexp.MustCompile(`inet6\s*(` + IPV6_RE + `)`)
 		IFCONFIG_IPV4_ADDR_RE = regexp.MustCompile(`inet addr:\s*(` + IP_RE + `)`)
 		IFCONFIG_IPV6_ADDR_RE = regexp.MustCompile(`inet6 addr:\s*(` + IPV6_RE + `)`)
-		IFCONFIG_MAC_ADDR_RE  = regexp.MustCompile(`HWaddr\s*(` + MAC_RE + `)`)
 	)
 
 	d := make(GuestMetric, 0)
 
-	var v4re, v6re, macre *regexp.Regexp
+	var v4re, v6re *regexp.Regexp
 	var out string
 	var err error
 	if out, err = runCmd("ip", "addr", "show", iface); err == nil {
 		v4re = IP_IPV4_ADDR_RE
 		v6re = IP_IPV6_ADDR_RE
-		macre = IP_MAC_ADDR_RE
 	} else if out, err = runCmd("ifconfig", iface); err == nil {
 		v4re = IFCONFIG_IPV4_ADDR_RE
 		v6re = IFCONFIG_IPV6_ADDR_RE
-		macre = IFCONFIG_MAC_ADDR_RE
 	} else {
 		return nil, fmt.Errorf("Cannot find ip/ifconfig command")
 	}
 
 	m := v4re.FindAllStringSubmatch(out, -1)
 	if m != nil {
-		for _, parts := range m {
-			d["ip"] = parts[1]
+		for i, parts := range m {
+			d[fmt.Sprintf("ipv4/%d", i)] = parts[1]
 		}
 	}
 	m = v6re.FindAllStringSubmatch(out, -1)
 	if m != nil {
 		for i, parts := range m {
-			d[fmt.Sprintf("ipv6/%d/addr", i)] = parts[1]
+			d[fmt.Sprintf("ipv6/%d", i)] = parts[1]
 		}
 	}
 
-	m = macre.FindAllStringSubmatch(out, -1)
-	if m != nil {
-		for i, parts := range m {
-			d[fmt.Sprintf("mac/%d", i)] = parts[1]
-		}
-	}
 	return d, nil
+}
+
+func getVifId(iface string) (string, error) {
+	filePath := fmt.Sprintf("/sys/class/net/%s/device/nodename", iface)
+	strLine, err := readSysfs(filePath)
+	if err != nil {
+		return "", err
+	}
+	vifId := ""
+	reNodename := regexp.MustCompile(`^device\/vif\/(\d+)$`)
+	if matched := reNodename.FindStringSubmatch(strLine); matched != nil {
+		vifId = matched[1]
+	}
+	if vifId == "" {
+		return "", fmt.Errorf("Not found string like \"device/vif/[id]\" in file %s", filePath)
+	} else {
+		return vifId, nil
+	}
 }
 
 func (c *Collector) CollectNetworkAddr() (GuestMetric, error) {
 	current := make(GuestMetric, 0)
 
-	paths, err := filepath.Glob("/sys/class/net/e*")
-	if err != nil {
-		return nil, err
+	var paths []string
+	vifNamePrefixList := [...]string{"eth", "eno", "ens", "emp", "enx"}
+	for _, prefix := range vifNamePrefixList {
+		prefixPaths, err := filepath.Glob(fmt.Sprintf("/sys/class/net/%s*", prefix))
+		if err != nil {
+			return nil, err
+		}
+		paths = append(paths, prefixPaths...)
 	}
 
 	for _, path := range paths {
 		iface := filepath.Base(path)
-		if addrs, err := EnumNetworkAddresses(iface); err == nil {
+		vifId, err := getVifId(iface)
+		if err != nil {
+			continue
+		}
+		if addrs, err := enumNetworkAddresses(iface); err == nil {
 			for tag, addr := range addrs {
-				current[fmt.Sprintf("%s/%s", iface, tag)] = addr
+				current[fmt.Sprintf("vif/%s/%s", vifId, tag)] = addr
 			}
 		}
 	}
