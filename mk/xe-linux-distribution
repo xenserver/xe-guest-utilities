@@ -287,6 +287,7 @@ identify_kylin()
 
     # distro
     # NeoKylin Linux Security OS V5.0 (Update8)
+    # Neokylin Linux Security OS Server release V5 (Santiago)
     # NeoKylin Linux Advanced Server release 6.5 (Berryllium)
     # NeoKylin Linux Advanced Server release 7.0
 
@@ -295,7 +296,7 @@ identify_kylin()
     fi
 
     eval $(sed -rn \
-            's/^NeoKylin Linux.*([0-9]+)\.([0-9]+).*$/distro=neokylin;major=\1;minor=\2;/gp;' \
+            's/^Neo[kK]ylin Linux[^0-9]+([0-9]+)\.?([0-9]+)?.*$/distro=neokylin;major=\1;minor=\2;/gp;' \
             "${kylin_release}")
 
     if [ -z "${major}" -o -z "${distro}" ] ; then
