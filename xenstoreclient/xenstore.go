@@ -63,6 +63,7 @@ type XenStoreClient interface {
 	Close() error
 	DO(packet *Packet) (*Packet, error)
 	Read(path string) (string, error)
+	List(path string) ([]string, error)
 	Mkdir(path string) error
 	Rm(path string) error
 	Write(path string, value string) error
@@ -279,6 +280,25 @@ func (xs *XenStore) Read(path string) (string, error) {
 		return "", err
 	}
 	return string(resp.Value), nil
+}
+
+func (xs *XenStore) List(path string) ([]string, error) {
+	v := []byte(path + "\x00")
+	req := &Packet{
+		OpCode: XS_DIRECTORY,
+		Req:    0,
+		TxID:   xs.tx,
+		Length: uint32(len(v)),
+		Value:  v,
+	}
+	resp, err := xs.DO(req)
+	if err != nil {
+		return []string{}, err
+	}
+	subItems := strings.Split(
+		string(bytes.Trim(resp.Value,"\x00")), "\x00")
+
+	return subItems, nil
 }
 
 func (xs *XenStore) Mkdir(path string) error {
@@ -505,6 +525,10 @@ func (xs *CachedXenStore) DO(req *Packet) (resp *Packet, err error) {
 
 func (xs *CachedXenStore) Read(path string) (string, error) {
 	return xs.xs.Read(path)
+}
+
+func (xs *CachedXenStore) List(path string) ([]string, error) {
+	return xs.xs.List(path)
 }
 
 func (xs *CachedXenStore) Mkdir(path string) error {
