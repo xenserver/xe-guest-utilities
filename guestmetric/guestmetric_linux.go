@@ -149,11 +149,31 @@ func (c *Collector) CollectNetworkAddr() (GuestMetric, error) {
 		}
 		paths = append(paths, prefixPaths...)
 	}
-
 	for _, path := range paths {
 		iface := filepath.Base(path)
 		vifId, err := getVifId(iface)
 		if err != nil {
+			macAddress, err := readSysfs(path+"/address")
+			if err !=nil {
+				continue
+			}
+			subPaths,err := c.Client.List("device/vif")
+			if err !=nil {
+				continue
+			}
+			for _,subPath := range(subPaths) {
+				iterMac,err := c.Client.Read(fmt.Sprintf("device/vif/%s/mac",subPath))
+				if err !=nil {
+					continue
+				}
+				if (iterMac == macAddress) {
+					if addrs, err := enumNetworkAddresses(iface); err == nil {
+						for tag, addr := range addrs {
+							current[fmt.Sprintf("vif/%s/%s", subPath, tag)] = addr
+						}
+					}
+				}
+			}
 			continue
 		}
 		if addrs, err := enumNetworkAddresses(iface); err == nil {
