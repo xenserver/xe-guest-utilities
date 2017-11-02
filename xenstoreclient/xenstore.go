@@ -296,7 +296,7 @@ func (xs *XenStore) List(path string) ([]string, error) {
 		return []string{}, err
 	}
 	subItems := strings.Split(
-		string(bytes.Trim(resp.Value,"\x00")), "\x00")
+		string(bytes.Trim(resp.Value, "\x00")), "\x00")
 
 	return subItems, nil
 }

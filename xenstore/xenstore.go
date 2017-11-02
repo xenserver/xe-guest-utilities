@@ -46,7 +46,6 @@ func xs_read(script_name string, args []string) {
 	}
 }
 
-
 func xs_list(script_name string, args []string) {
 	if len(args) == 0 || args[0] == "-h" {
 		die("Usage: %s key [ key ... ]", script_name)
@@ -124,7 +123,6 @@ func main() {
 		script_name = script_name + " " + operation
 		args = os.Args[2:]
 	}
-
 
 	switch operation {
 	case "read":
