@@ -119,9 +119,9 @@ func enumNetworkAddresses(iface string) (GuestMetric, error) {
 	return d, nil
 }
 
-func getVifId(iface string) (string, error) {
-	filePath := fmt.Sprintf("/sys/class/net/%s/device/nodename", iface)
-	strLine, err := readSysfs(filePath)
+func getPlainVifId(path string) (string, error) {
+	nodenamePath := fmt.Sprintf("%s/device/nodename", path)
+	strLine, err := readSysfs(nodenamePath)
 	if err != nil {
 		return "", err
 	}
@@ -131,10 +131,51 @@ func getVifId(iface string) (string, error) {
 		vifId = matched[1]
 	}
 	if vifId == "" {
-		return "", fmt.Errorf("Not found string like \"device/vif/[id]\" in file %s", filePath)
+		return "", fmt.Errorf("Not found string like \"device/vif/[id]\" in file %s", nodenamePath)
 	} else {
 		return vifId, nil
 	}
+}
+
+func (c *Collector) getSriovVifId(path string) (string, error) {
+	sriovDevicePath := "xenserver/device/net-sriov-vf"
+	macAddress, err := readSysfs(path + "/address")
+	if err != nil {
+		return "", err
+	}
+	subPaths, err := c.Client.List(sriovDevicePath)
+	if err != nil {
+		return "", err
+	}
+	for _, subPath := range subPaths {
+		iterMac, err := c.Client.Read(fmt.Sprintf("%s/%s/mac", sriovDevicePath, subPath))
+		if err != nil {
+			continue
+		}
+		if iterMac == macAddress {
+			return subPath, nil
+		}
+	}
+	return "", fmt.Errorf("Cannot find a MAC address to map with %s", path)
+}
+
+// return vif_xenstore_prefix * vif_id * error where
+// `vif_xenstore_prefix` could be either `attr/vif` for plain VIF or
+// `xenserver/attr/net-sriov-vf` for SR-IOV VIF
+func (c *Collector) getTargetXenstorePath(path string) (string, string, error) {
+	plainVifPrefix := "attr/vif"
+	sriovVifPrefix := "xenserver/attr/net-sriov-vf"
+	// try to get `vif_id` from nodename interface, only a plain VIF have the nodename interface.
+	vifId, err1 := getPlainVifId(path)
+	if vifId != "" {
+		return plainVifPrefix, vifId, nil
+	}
+	// not a plain VIF, it could possible be an SR-IOV VIF, try to get vif_id from MAC address mapping
+	vifId, err2 := c.getSriovVifId(path)
+	if vifId != "" {
+		return sriovVifPrefix, vifId, nil
+	}
+	return "", "", fmt.Errorf("Failed to get VIF ID, errors: %s | %s", err1.Error(), err2.Error())
 }
 
 func (c *Collector) CollectNetworkAddr() (GuestMetric, error) {
@@ -149,20 +190,20 @@ func (c *Collector) CollectNetworkAddr() (GuestMetric, error) {
 		}
 		paths = append(paths, prefixPaths...)
 	}
-
 	for _, path := range paths {
-		iface := filepath.Base(path)
-		vifId, err := getVifId(iface)
+		// a path is going to be like "/sys/class/net/eth0"
+		prefix, vifId, err := c.getTargetXenstorePath(path)
 		if err != nil {
 			continue
 		}
+		iface := filepath.Base(path)
 		if addrs, err := enumNetworkAddresses(iface); err == nil {
 			for tag, addr := range addrs {
-				current[fmt.Sprintf("vif/%s/%s", vifId, tag)] = addr
+				current[fmt.Sprintf("%s/%s/%s", prefix, vifId, tag)] = addr
 			}
 		}
 	}
-	return prefixKeys("attr/", current), nil
+	return current, nil
 }
 
 func readSysfs(filename string) (string, error) {
