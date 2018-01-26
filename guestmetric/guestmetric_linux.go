@@ -119,9 +119,9 @@ func enumNetworkAddresses(iface string) (GuestMetric, error) {
 	return d, nil
 }
 
-func getVifId(iface string) (string, error) {
-	filePath := fmt.Sprintf("/sys/class/net/%s/device/nodename", iface)
-	strLine, err := readSysfs(filePath)
+func getVifIdfromNodename(path string) (string, error) {
+	nodenamePath := fmt.Sprintf("%s/device/nodename", path)
+	strLine, err := readSysfs(nodenamePath)
 	if err != nil {
 		return "", err
 	}
@@ -131,10 +131,44 @@ func getVifId(iface string) (string, error) {
 		vifId = matched[1]
 	}
 	if vifId == "" {
-		return "", fmt.Errorf("Not found string like \"device/vif/[id]\" in file %s", filePath)
+		return "", fmt.Errorf("Not found string like \"device/vif/[id]\" in file %s", nodenamePath)
 	} else {
 		return vifId, nil
 	}
+}
+func (c *Collector) getVifIdfromMacaddressMapping(path string) (string, error) {
+	macAddress, err := readSysfs(path + "/address")
+	if err != nil {
+		return "", err
+	}
+	subPaths, err := c.Client.List("device/vif")
+	if err != nil {
+		return "", err
+	}
+	for _, subPath := range subPaths {
+		iterMac, err := c.Client.Read(fmt.Sprintf("device/vif/%s/mac", subPath))
+		if err != nil {
+			continue
+		}
+		if iterMac == macAddress {
+			return subPath, nil
+		}
+	}
+	return "", fmt.Errorf("Cannot find a mac address to map with")
+}
+
+func (c *Collector) getVifId(path string) (string, error) {
+	// try to get vif_id from nodename interface, only a plain vif have nodename interface.
+	vifId, err1 := getVifIdfromNodename(path)
+	if vifId != "" {
+		return vifId, nil
+	}
+	// not a plain vif, it could possible be a SRIOV vif, try to get vif id from mac address
+	vifId, err2 := c.getVifIdfromMacaddressMapping(path)
+	if vifId != "" {
+		return vifId, nil
+	}
+	return "", fmt.Errorf("Cannot get vifId, errors: %s | %s", err1.Error(), err2.Error())
 }
 
 func (c *Collector) CollectNetworkAddr() (GuestMetric, error) {
@@ -149,13 +183,13 @@ func (c *Collector) CollectNetworkAddr() (GuestMetric, error) {
 		}
 		paths = append(paths, prefixPaths...)
 	}
-
 	for _, path := range paths {
-		iface := filepath.Base(path)
-		vifId, err := getVifId(iface)
+		// a path is going to be like "/sys/class/net/eth0"
+		vifId, err := c.getVifId(path)
 		if err != nil {
 			continue
 		}
+		iface := filepath.Base(path)
 		if addrs, err := enumNetworkAddresses(iface); err == nil {
 			for tag, addr := range addrs {
 				current[fmt.Sprintf("vif/%s/%s", vifId, tag)] = addr
