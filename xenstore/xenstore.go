@@ -58,7 +58,9 @@ func xs_list(script_name string, args []string) {
 			die("%s error: %v", script_name, err)
 		}
 
-		fmt.Println(result)
+		for _, subPath := range result {
+			fmt.Println(subPath)
+		}
 	}
 }
 
