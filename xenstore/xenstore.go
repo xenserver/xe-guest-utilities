@@ -46,6 +46,24 @@ func xs_read(script_name string, args []string) {
 	}
 }
 
+func xs_list(script_name string, args []string) {
+	if len(args) == 0 || args[0] == "-h" {
+		die("Usage: %s key [ key ... ]", script_name)
+	}
+
+	xs := new_xs()
+	for _, key := range args[:] {
+		result, err := xs.List(key)
+		if err != nil {
+			die("%s error: %v", script_name, err)
+		}
+
+		for _, subPath := range result {
+			fmt.Println(subPath)
+		}
+	}
+}
+
 func xs_write(script_name string, args []string) {
 	if len(args) == 0 || args[0] == "-h" || len(args)%2 != 0 {
 		die("Usage: %s key value [ key value ... ]", script_name)
@@ -111,6 +129,8 @@ func main() {
 	switch operation {
 	case "read":
 		xs_read(script_name, args)
+	case "list":
+		xs_list(script_name, args)
 	case "write":
 		xs_write(script_name, args)
 	case "rm":
