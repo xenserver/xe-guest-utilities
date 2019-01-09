@@ -47,6 +47,7 @@ write_to_output()
 	MINOR=$minor
 	DISTRO=$distro
 	UNAME=$uname
+	NAME=$name
 	return 0
     fi
 
@@ -205,21 +206,33 @@ identify_sles()
     # SUSE Linux Enterprise Server 11 (i586)
     # VERSION = 11
     # PATCHLEVEL = 0
+    #
+    # /etc/SuSE-release is deprecated and removed in SLE15, so use /etc/os-release to detect.
+    # NAME="SLES"
+    # VERSION="15"
+    # VERSION_ID="15"
+    # PRETTY_NAME="SUSE Linux Enterprise Server 15"
+    # ID="sles"
+    # ID_LIKE="suse"
+    # ANSI_COLOR="0;32"
+    # CPE_NAME="cpe:/o:suse:sles:15"
 
     if [ ! -f "${suse_release}" ] ; then
         return 1
     fi
 
     eval $(sed -n \
-               -e 's/^SUSE L\(inux\|INUX\) Enterprise \([a-zA-Z0-9_]*\) \([0-9]*\) (.*)/_major=\3;/gp;' \
+               -e 's/^SUSE L\(inux\|INUX\) Enterprise \([a-zA-Z0-9_]*\) \([0-9]*\) (.*)/_major=\3;_pretty_name="\0";/gp;' \
                -e 's/^VERSION = \([0-9]*\)$/major=\1;/gp;' \
                -e 's/^PATCHLEVEL = \([0-9]*\)$/minor=\1;/gp;' \
-               "${suse_release}")
+	       -e 's/^PRETTY_NAME="SUSE L\(inux\|INUX\) Enterprise \([a-zA-Z0-9_]*\) \([0-9]*\)"/_major=\3;_pretty_name=\0;/gp' \
+	       -e 's/^VERSION="\([0-9]*\)"$/major=\1;/gp' \
+	       "${suse_release}")
 
     if [ -z "${major}" -o -z "${_major}" ] ; then
         return 1
     fi
-
+    
     if [ "${major}" != "${_major}" ] ; then
         return 1
     fi
@@ -228,8 +241,7 @@ identify_sles()
         minor=0
     fi
 
-    write_to_output "sles" "${major}" "${minor}" "$(head -n 1 ${suse_release})"
-
+    write_to_output "sles" "${major}" "${minor}" "${_pretty_name##*=}"
 }
 
 identify_lsb()
@@ -463,13 +475,16 @@ if [ -z "${TEST}" ] ; then
     identify_redhat /etc/enterprise-release && exit 0
     identify_redhat /etc/centos-release && exit 0
     identify_redhat /etc/redhat-release && exit 0
-    identify_sles   /etc/SuSE-release   && exit 0
+    #identify SuSE-release before, as previous version of SUSE or other distros also have os-release
+    identify_sles /etc/SuSE-release && exit 0
+    identify_sles /etc/os-release && exit 0
     #identify Linx disto before debian, as Linx has both linx_release and debian_version.
-    identify_yinhe   /etc/kylin-build   && exit 0
-    identify_linx   /etc/linx-release   && exit 0
-    identify_lsb    lsb_release         && exit 0
+    identify_yinhe /etc/kylin-build   && exit 0
+    identify_linx /etc/linx-release   && exit 0
+    identify_lsb lsb_release         && exit 0
     identify_debian /etc/debian_version && exit 0
     identify_boot2docker /etc/boot2docker && exit 0
+
 
     if [ $# -eq 1 ] ; then
 	rm -f "$1"
