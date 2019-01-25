@@ -3,7 +3,7 @@
 go-guest-utilites
 ===================
 
-This is the golang guest utilites for XenServer
+This is the golang guest utilities for XenServer
 
 
 XenStore CLI
