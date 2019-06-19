@@ -222,11 +222,11 @@ identify_sles()
     fi
 
     eval $(sed -n \
+	       -e 's/^VERSION_ID="\([0-9]*\)\.\?\([0-9]*\)\?"$/major=\1;minor=\2;/gp' \
+	       -e 's/^PRETTY_NAME="SUSE L\(inux\|INUX\) Enterprise \([a-zA-Z0-9_]*\) \([0-9]*\)\( SP[0-9]*\)\?"/_major=\3;_pretty_name=\0;/gp' \
                -e 's/^SUSE L\(inux\|INUX\) Enterprise \([a-zA-Z0-9_]*\) \([0-9]*\) (.*)/_major=\3;_pretty_name="\0";/gp;' \
                -e 's/^VERSION = \([0-9]*\)$/major=\1;/gp;' \
                -e 's/^PATCHLEVEL = \([0-9]*\)$/minor=\1;/gp;' \
-	       -e 's/^PRETTY_NAME="SUSE L\(inux\|INUX\) Enterprise \([a-zA-Z0-9_]*\) \([0-9]*\)"/_major=\3;_pretty_name=\0;/gp' \
-	       -e 's/^VERSION="\([0-9]*\)"$/major=\1;/gp' \
 	       "${suse_release}")
 
     if [ -z "${major}" -o -z "${_major}" ] ; then
@@ -238,7 +238,7 @@ identify_sles()
     fi
 
     if [ -z "${minor}" ] ; then
-        minor=0
+	minor=0
     fi
 
     write_to_output "sles" "${major}" "${minor}" "${_pretty_name##*=}"
