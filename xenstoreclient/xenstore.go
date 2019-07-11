@@ -72,6 +72,7 @@ type XenStoreClient interface {
 	WatchEvent(key string) (token string, ok bool)
 	UnWatch(path string, token string) error
 	StopWatch() error
+	GetDomainPath(domid string) (string, error)
 }
 
 func ReadPacket(r io.Reader) (packet *Packet, err error) {
@@ -481,6 +482,22 @@ func (xs *XenStore) StopWatch() error {
 	return nil
 }
 
+func (xs *XenStore) GetDomainPath(domid string) (string, error) {
+	v := []byte(domid + "\x00")
+	req := &Packet{
+		OpCode: XS_GET_DOMAIN_PATH,
+		Req:    0,
+		TxID:   xs.tx,
+		Length: uint32(len(v)),
+		Value:  v,
+	}
+	resp, err := xs.DO(req)
+	if err != nil {
+		return "", err
+	}
+	return string(resp.Value), nil
+}
+
 type Content struct {
 	value     string
 	keepalive bool
@@ -557,6 +574,10 @@ func (xs *CachedXenStore) UnWatch(path string, token string) error {
 
 func (xs *CachedXenStore) StopWatch() error {
 	return xs.xs.StopWatch()
+}
+
+func (xs *CachedXenStore) GetDomainPath(domid string) (string, error) {
+	return xs.xs.GetDomainPath(domid)
 }
 
 func (xs *CachedXenStore) Clear() {
