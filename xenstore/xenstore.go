@@ -3,6 +3,7 @@ package main
 import (
 	xenstoreclient "../xenstoreclient"
 	"fmt"
+	"golang.org/x/sys/unix"
 	"os"
 	"strings"
 )
@@ -16,9 +17,11 @@ func die(format string, a ...interface{}) {
 func usage() {
 	die(
 		`Usage: xenstore read key [ key ... ]
+                list key [ key ... ]
                 write key value [ key value ... ]
                 rm key [ key ... ]
-                exists key [ key ... ]`)
+                exists key [ key ... ]
+                ls [ key ... ]`)
 }
 
 func new_xs() xenstoreclient.XenStoreClient {
@@ -109,6 +112,116 @@ func xs_exists(script_name string, args []string) {
 	}
 }
 
+var max_width = 80
+
+const TAG = " = \"...\""
+const XENSTORE_ABS_PATH_MAX = 3072
+const STRING_MAX = (XENSTORE_ABS_PATH_MAX + 1024)
+
+func sanitise_value(val string) string {
+	var builder strings.Builder
+
+	for _, r := range val {
+		switch {
+		case r >= ' ' && r <= '~' && r != '\\':
+			builder.WriteRune(r)
+		case r == '\t':
+			builder.WriteString("\\t")
+		case r == '\n':
+			builder.WriteString("\\n")
+		case r == '\r':
+			builder.WriteString("\\r")
+		case r == '\\':
+			builder.WriteString("\\\\")
+		case r < '\010':
+			builder.WriteString(fmt.Sprintf("%03o", r))
+		default:
+			builder.WriteString(fmt.Sprintf("x%02x", r))
+		}
+	}
+
+	return builder.String()
+}
+
+func do_xs_ls(xs xenstoreclient.XenStoreClient, path string, depth int) {
+	result, err := xs.List(path)
+	if err != nil {
+		die("xs_ls error: %v %s", err, path)
+	}
+	for _, sub_path := range result {
+		if len(sub_path) == 0 {
+			continue
+		}
+		slash := "/"
+		if len(path) > 0 && path[len(path)-1] == '/' {
+			slash = ""
+		}
+		newPath := path + slash + sub_path
+
+		col := 0
+		for col < depth {
+			fmt.Print(" ")
+			col++
+		}
+
+		n := len(sub_path)
+		if n > (max_width - len(TAG) - col) {
+			n = (max_width - len(TAG) - col)
+		}
+		fmt.Printf(sub_path[:n])
+		col += n
+
+		if len(newPath) >= STRING_MAX {
+			fmt.Println(":")
+		} else {
+			val, err := xs.Read(newPath)
+			if err != nil {
+				fmt.Println(":")
+			} else {
+				val = sanitise_value(val)
+				if (col + len(val) + len(TAG)) > max_width {
+					n := max_width - col - len(TAG)
+					if n < 0 {
+						n = 0
+					}
+					fmt.Printf(" = \"%s...\"\n", val[:n])
+				} else {
+					fmt.Printf(" = \"%s\"\n", val)
+				}
+			}
+		}
+
+		do_xs_ls(xs, newPath, depth+1)
+	}
+}
+
+func xs_ls(script_name string, args []string) {
+	if len(args) == 1 && args[0] == "-h" {
+		die("Usage: %s [ key ... ]", script_name)
+	}
+
+	const TIOCGWINSZ = 0x5413
+	winsize, err := unix.IoctlGetWinsize(int(os.Stdout.Fd()), TIOCGWINSZ)
+	if err == nil {
+		max_width = int(winsize.Col)
+	}
+
+	xs := new_xs()
+	if len(args) != 0 {
+		for _, key := range args[:] {
+			do_xs_ls(xs, key, 0)
+		}
+	} else {
+		domain_id, err := xs.Read("domid")
+		if err == nil {
+			domain_path, err := xs.GetDomainPath(strings.TrimRight(domain_id, "\x00"))
+			if err == nil {
+				do_xs_ls(xs, strings.TrimRight(domain_path, "\x00"), 0)
+			}
+		}
+	}
+}
+
 func main() {
 	var operation string
 	var args []string
@@ -137,6 +250,8 @@ func main() {
 		xs_rm(script_name, args)
 	case "exists":
 		xs_exists(script_name, args)
+	case "ls":
+		xs_ls(script_name, args)
 	default:
 		usage()
 	}
