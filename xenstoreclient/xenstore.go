@@ -16,14 +16,19 @@ import (
 	"time"
 )
 
-type Permission int
+type Perm int
 
 const (
-	PERM_NONE Permission = iota
+	PERM_NONE Perm = iota
 	PERM_READ
 	PERM_WRITE
 	PERM_READWRITE
 )
+
+type Permission struct {
+	Id uint
+	Pe Perm
+}
 
 type Operation uint32
 
@@ -67,7 +72,7 @@ type XenStoreClient interface {
 	Mkdir(path string) error
 	Rm(path string) error
 	Write(path string, value string) error
-	GetPermission(path string) (map[int]Permission, error)
+	GetPermission(path string) ([]Permission, error)
 	Watch(path string, token string) error
 	WatchEvent(key string) (token string, ok bool)
 	UnWatch(path string, token string) error
@@ -341,8 +346,8 @@ func (xs *XenStore) Write(path string, value string) error {
 	return err
 }
 
-func (xs *XenStore) GetPermission(path string) (map[int]Permission, error) {
-	perm := make(map[int]Permission, 0)
+func (xs *XenStore) GetPermission(path string) ([]Permission, error) {
+	perms := make([]Permission, 0)
 
 	v := []byte(path + "\x00")
 	req := &Packet{
@@ -358,11 +363,11 @@ func (xs *XenStore) GetPermission(path string) (map[int]Permission, error) {
 	}
 
 	for _, e := range strings.Split(string(resp.Value[:len(resp.Value)-1]), "\x00") {
-		k, err := strconv.Atoi(e[1:])
+		k, err := strconv.ParseUint(e[1:], 0, 0)
 		if err != nil {
 			return nil, err
 		}
-		var p Permission
+		var p Perm
 		switch e[0] {
 		case 'n':
 			p = PERM_NONE
@@ -372,10 +377,12 @@ func (xs *XenStore) GetPermission(path string) (map[int]Permission, error) {
 			p = PERM_WRITE
 		case 'b':
 			p = PERM_READWRITE
+		default:
+			return nil, errors.New("Invalid permision value")
 		}
-		perm[k] = p
+		perms = append(perms, Permission{uint(k), p})
 	}
-	return perm, nil
+	return perms, nil
 }
 
 func (xs *XenStore) UnWatch(path string, token string) (err error) {
@@ -556,7 +563,7 @@ func (xs *CachedXenStore) Rm(path string) error {
 	return xs.xs.Rm(path)
 }
 
-func (xs *CachedXenStore) GetPermission(path string) (map[int]Permission, error) {
+func (xs *CachedXenStore) GetPermission(path string) ([]Permission, error) {
 	return xs.xs.GetPermission(path)
 }
 
