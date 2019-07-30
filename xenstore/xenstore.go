@@ -2,9 +2,11 @@ package main
 
 import (
 	xenstoreclient "../xenstoreclient"
+	"errors"
 	"fmt"
 	"golang.org/x/sys/unix"
 	"os"
+	"strconv"
 	"strings"
 )
 
@@ -21,7 +23,8 @@ func usage() {
                 write key value [ key value ... ]
                 rm key [ key ... ]
                 exists key [ key ... ]
-                ls [ key ... ]`)
+                ls [ key ... ]
+                chmod key mode [modes...]`)
 }
 
 func new_xs() xenstoreclient.XenStoreClient {
@@ -222,6 +225,53 @@ func xs_ls(script_name string, args []string) {
 	}
 }
 
+func xs_chmod(script_name string, args []string) {
+	if len(args) < 2 || args[0] == "-h" {
+		die("Usage: %s key mode [modes...]", script_name)
+	}
+
+	var err error
+	key := args[0]
+	var perms []xenstoreclient.Permission
+
+	for _, m := range args[1:] {
+		if len(m) > 1 {
+			var p xenstoreclient.Permission
+			switch m[0] {
+			case 'n':
+				p.Pe = xenstoreclient.PERM_NONE
+			case 'r':
+				p.Pe = xenstoreclient.PERM_READ
+			case 'w':
+				p.Pe = xenstoreclient.PERM_WRITE
+			case 'b':
+				p.Pe = xenstoreclient.PERM_READWRITE
+			default:
+				err = errors.New("Invalid mode string")
+			}
+			if err == nil {
+				var id uint64
+				id, err = strconv.ParseUint(m[1:], 10, 0)
+				if err == nil {
+					p.Id = uint(id)
+					perms = append(perms, p)
+				}
+			}
+		} else {
+			err = errors.New("Invalid mode length")
+		}
+		if err != nil {
+			die("%s error: %v", script_name, err)
+		}
+	}
+
+	xs := new_xs()
+	err = xs.SetPermission(key, perms)
+	if err != nil {
+		die("%s error: %v", script_name, err)
+	}
+}
+
 func main() {
 	var operation string
 	var args []string
@@ -252,6 +302,8 @@ func main() {
 		xs_exists(script_name, args)
 	case "ls":
 		xs_ls(script_name, args)
+	case "chmod":
+		xs_chmod(script_name, args)
 	default:
 		usage()
 	}

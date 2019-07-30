@@ -30,6 +30,9 @@ binary-arch: build
 	ln -s /usr/bin/xenstore $(DESTDIR)/usr/bin/xenstore-write
 	ln -s /usr/bin/xenstore $(DESTDIR)/usr/bin/xenstore-exists
 	ln -s /usr/bin/xenstore $(DESTDIR)/usr/bin/xenstore-rm
+	ln -s /usr/bin/xenstore $(DESTDIR)/usr/bin/xenstore-list
+	ln -s /usr/bin/xenstore $(DESTDIR)/usr/bin/xenstore-ls
+	ln -s /usr/bin/xenstore $(DESTDIR)/usr/bin/xenstore-chmod
 
 	cp xe-daemon $(DESTDIR)/usr/sbin/xe-daemon
 	chmod 0755 $(DESTDIR)/usr/sbin/xe-daemon

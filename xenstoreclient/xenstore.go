@@ -25,9 +25,27 @@ const (
 	PERM_READWRITE
 )
 
+func (p *Perm) ToStr() string {
+	switch *p {
+	case PERM_NONE:
+		return "n"
+	case PERM_READ:
+		return "r"
+	case PERM_WRITE:
+		return "w"
+	case PERM_READWRITE:
+		return "b"
+	}
+	return " "
+}
+
 type Permission struct {
 	Id uint
 	Pe Perm
+}
+
+func (p *Permission) ToStr() string {
+	return p.Pe.ToStr() + strconv.FormatUint(uint64(p.Id), 10)
 }
 
 type Operation uint32
@@ -73,6 +91,7 @@ type XenStoreClient interface {
 	Rm(path string) error
 	Write(path string, value string) error
 	GetPermission(path string) ([]Permission, error)
+	SetPermission(path string, perms []Permission) error
 	Watch(path string, token string) error
 	WatchEvent(key string) (token string, ok bool)
 	UnWatch(path string, token string) error
@@ -385,6 +404,24 @@ func (xs *XenStore) GetPermission(path string) ([]Permission, error) {
 	return perms, nil
 }
 
+func (xs *XenStore) SetPermission(path string, perms []Permission) error {
+	s := path + "\x00"
+	for _, p := range perms {
+		s += p.ToStr() + "\x00"
+	}
+
+	v := []byte(s)
+	req := &Packet{
+		OpCode: XS_SET_PERMS,
+		Req:    0,
+		TxID:   xs.tx,
+		Length: uint32(len(v)),
+		Value:  v,
+	}
+	_, err := xs.DO(req)
+	return err
+}
+
 func (xs *XenStore) UnWatch(path string, token string) (err error) {
 	v := []byte(path + "\x00" + token + "\x00")
 	req := &Packet{
@@ -565,6 +602,10 @@ func (xs *CachedXenStore) Rm(path string) error {
 
 func (xs *CachedXenStore) GetPermission(path string) ([]Permission, error) {
 	return xs.xs.GetPermission(path)
+}
+
+func (xs *CachedXenStore) SetPermission(path string, perms []Permission) error {
+	return xs.xs.SetPermission(path, perms)
 }
 
 func (xs *CachedXenStore) Watch(path string, token string) error {
