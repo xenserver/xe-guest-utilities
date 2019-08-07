@@ -9,20 +9,18 @@ import (
 )
 
 type mockFile struct {
-	r         io.Reader
-	w         io.Writer
-	watchKeys map[string]struct{}
-	t         *testing.T
+	r io.Reader
+	w io.Writer
+	t *testing.T
 }
 
 func NewMockFile(t *testing.T) io.ReadWriteCloser {
 	var b bytes.Buffer
 
 	return &mockFile{
-		r:         &b,
-		w:         &b,
-		t:         t,
-		watchKeys: make(map[string]struct{}),
+		r: &b,
+		w: &b,
+		t: t,
 	}
 }
 
@@ -67,31 +65,31 @@ func TestXenStore(t *testing.T) {
 	}
 }
 
-func TestXenStoreWatch2(t *testing.T) {
+func TestXenStoreWatch(t *testing.T) {
 	xs, err := newXenstore(0, NewMockFile(t))
 	if err != nil {
 		t.Errorf("newXenstore error: %#v\n", err)
 	}
 	defer xs.Close()
 
+	ready := make(chan struct{})
+	stopped := make(chan struct{})
+
 	go func() {
-		time.Sleep(5 * time.Second)
+		<-ready
 		if err := xs.StopWatch(); err != nil {
 			t.Errorf("xs.StopWatch error: %#v\n", err)
 		}
+		close(stopped)
 	}()
 
-	go func() {
-		for i := 0; i < 5; i++ {
-			xs.Write("foo", "bar")
-			time.Sleep(1 * time.Second)
+	if out, err := xs.Watch([]string{"foo"}); err == nil {
+		close(ready)
+		if e, ok := <-out; ok {
+			fmt.Println(e.Path)
 		}
-	}()
-
-	err = xs.Watch("foo", "test")
-	if err != nil {
+	} else {
 		t.Errorf("xs.Watch(\"foo\") error: %#v\n", err)
 	}
-
-	time.Sleep(6 * time.Second)
+	<-stopped
 }

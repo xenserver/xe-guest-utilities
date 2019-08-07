@@ -1,19 +1,16 @@
 package xenstoreclient
 
 import (
-	syslog "../syslog"
 	"bufio"
 	"bytes"
 	"encoding/binary"
 	"errors"
 	"fmt"
 	"io"
-	"log"
 	"os"
 	"strconv"
 	"strings"
 	"sync"
-	"time"
 )
 
 type Perm int
@@ -82,6 +79,17 @@ type Packet struct {
 	Value  []byte
 }
 
+const (
+	EVENT_PATH = iota
+	EVENT_TOKEN
+	EVENT_MAXNUM
+)
+
+type Event struct {
+	Path  string
+	Token string
+}
+
 type XenStoreClient interface {
 	Close() error
 	DO(packet *Packet) (*Packet, error)
@@ -92,9 +100,7 @@ type XenStoreClient interface {
 	Write(path string, value string) error
 	GetPermission(path string) ([]Permission, error)
 	SetPermission(path string, perms []Permission) error
-	Watch(path string, token string) error
-	WatchEvent(key string) (token string, ok bool)
-	UnWatch(path string, token string) error
+	Watch(path []string) (chan Event, error)
 	StopWatch() error
 	GetDomainPath(domid string) (string, error)
 }
@@ -142,7 +148,6 @@ func (p *Packet) Write(w io.Writer) (err error) {
 	} else {
 		bw = bufio.NewWriter(w)
 	}
-	defer bw.Flush()
 
 	err = binary.Write(bw, binary.LittleEndian, p.OpCode)
 	if err != nil {
@@ -165,59 +170,23 @@ func (p *Packet) Write(w io.Writer) (err error) {
 		if err != nil {
 			return err
 		}
+		err = bw.Flush()
+		if err != nil {
+			return err
+		}
 	}
 	return nil
 }
 
-type WatchQueueManager struct {
-	watchQueues map[string]chan string
-	rwlocker    *sync.RWMutex
-}
-
-func (wq *WatchQueueManager) RemoveByKey(key string) {
-	wq.rwlocker.Lock()
-	defer wq.rwlocker.Unlock()
-	delete(wq.watchQueues, key)
-	return
-}
-
-func (wq *WatchQueueManager) SetEventByKey(key string, token string) (ok bool) {
-	wq.rwlocker.RLock()
-	defer wq.rwlocker.RUnlock()
-	wq.watchQueues[key] <- token
-	return
-}
-
-func (wq *WatchQueueManager) GetEventByKey(key string) (token string, ok bool) {
-	wq.rwlocker.RLock()
-	defer wq.rwlocker.RUnlock()
-	ec, ok := wq.watchQueues[key]
-	if len(ec) != 0 {
-		return <-ec, ok
-	} else {
-		ok = false
-	}
-	return
-}
-
-func (wq *WatchQueueManager) AddChanByKey(key string) {
-	wq.rwlocker.Lock()
-	defer wq.rwlocker.Unlock()
-	wq.watchQueues[key] = make(chan string, 100)
-}
-
 type XenStore struct {
-	tx                 uint32
-	xbFile             io.ReadWriteCloser
-	xbFileReader       *bufio.Reader
-	muWatch            *sync.Mutex
-	onceWatch          *sync.Once
-	watchQueue         WatchQueueManager
-	watchStopChan      chan struct{}
-	watchStoppedChan   chan struct{}
-	nonWatchQueue      chan []byte
-	xbFileReaderLocker *sync.Mutex
-	logger             *log.Logger
+	tx               uint32
+	xbFile           io.ReadWriteCloser
+	xbFileReader     *bufio.Reader
+	onceWatch        *sync.Once
+	outEvent         chan Event
+	watchStopChan    chan struct{}
+	watchStoppedChan chan struct{}
+	nonWatchQueue    chan []byte
 }
 
 func NewXenstore(tx uint32) (XenStoreClient, error) {
@@ -233,38 +202,16 @@ func NewXenstore(tx uint32) (XenStoreClient, error) {
 	return newXenstore(tx, xbFile)
 }
 
-const (
-	LoggerName string = "xenstore"
-)
-
 func newXenstore(tx uint32, rwc io.ReadWriteCloser) (XenStoreClient, error) {
-	var loggerWriter io.Writer = os.Stderr
-	var topic string = LoggerName
-	if w, err := syslog.NewSyslogWriter(topic); err == nil {
-		loggerWriter = w
-		topic = ""
-	} else {
-		fmt.Fprintf(os.Stderr, "NewSyslogWriter(%s) error: %s, use stderr logging\n", topic, err)
-		topic = LoggerName + ": "
-	}
-
-	logger := log.New(loggerWriter, topic, 0)
-
 	return &XenStore{
-		tx:           tx,
-		xbFile:       rwc,
-		xbFileReader: bufio.NewReader(rwc),
-		watchQueue: WatchQueueManager{
-			watchQueues: make(map[string]chan string, 0),
-			rwlocker:    &sync.RWMutex{},
-		},
-		nonWatchQueue:      nil,
-		watchStopChan:      make(chan struct{}, 1),
-		watchStoppedChan:   make(chan struct{}, 1),
-		onceWatch:          &sync.Once{},
-		muWatch:            &sync.Mutex{},
-		xbFileReaderLocker: &sync.Mutex{},
-		logger:             logger,
+		tx:               tx,
+		xbFile:           rwc,
+		xbFileReader:     bufio.NewReader(rwc),
+		nonWatchQueue:    nil,
+		watchStopChan:    make(chan struct{}, 1),
+		watchStoppedChan: make(chan struct{}, 1),
+		onceWatch:        &sync.Once{},
+		outEvent:         make(chan Event, 100),
 	}, nil
 }
 
@@ -273,8 +220,6 @@ func (xs *XenStore) Close() error {
 }
 
 func (xs *XenStore) DO(req *Packet) (resp *Packet, err error) {
-	xs.xbFileReaderLocker.Lock()
-	defer xs.xbFileReaderLocker.Unlock()
 	err = req.Write(xs.xbFile)
 	if err != nil {
 		return nil, err
@@ -422,82 +367,8 @@ func (xs *XenStore) SetPermission(path string, perms []Permission) error {
 	return err
 }
 
-func (xs *XenStore) UnWatch(path string, token string) (err error) {
-	v := []byte(path + "\x00" + token + "\x00")
-	req := &Packet{
-		OpCode: XS_UNWATCH,
-		Req:    0,
-		TxID:   xs.tx,
-		Length: uint32(len(v)),
-		Value:  v,
-	}
-	_, err = xs.DO(req)
-	if err != nil {
-		return
-	}
-	xs.watchQueue.RemoveByKey(path)
-	return nil
-}
-
-func (xs *XenStore) Watch(path string, token string) error {
-	watcher := func() {
-		xs.logger.Printf("Watch: Start")
-		type XSData struct {
-			*Packet
-			Error error
-		}
-
-		xsDataChan := make(chan XSData, 100)
-		xsReadStop := make(chan bool)
-		go func(r io.Reader, out chan<- XSData, c <-chan bool) {
-			for {
-				// The read will return at once if no data in r
-				p, err := ReadPacket(r)
-				ticker := time.Tick(1 * time.Second)
-				if err != nil {
-					select {
-					case <-c:
-						return
-					case <-ticker:
-						continue
-					}
-				}
-				out <- XSData{Packet: p, Error: err}
-			}
-		}(xs.xbFileReader, xsDataChan, xsReadStop)
-
-		xs.nonWatchQueue = make(chan []byte, 100)
-		for {
-			select {
-			case <-xs.watchStopChan:
-				xs.logger.Printf("Watch: receive stop signal, quit.\n")
-				xs.watchStoppedChan <- struct{}{}
-				xsReadStop <- true
-				return
-			case xsdata := <-xsDataChan:
-				if xsdata.Error != nil {
-					xs.logger.Printf("Watch: receive error: %#v", xsdata.Error)
-					return
-				}
-				switch xsdata.Packet.OpCode {
-				case XS_WATCH_EVENT:
-					parts := strings.SplitN(string(xsdata.Value), "\x00", 2)
-					path := parts[0]
-					token := parts[1]
-					xs.logger.Printf("Get XS_WATCH_EVENT key:%s, token:%s\n", path, token)
-					xs.watchQueue.SetEventByKey(path, token)
-				default:
-					xs.logger.Printf("Get non watch event %#v\n", xsdata.Packet.OpCode)
-					var b bytes.Buffer
-					xsdata.Packet.Write(&b)
-					xs.nonWatchQueue <- b.Bytes()
-				}
-			}
-		}
-	}
-	xs.muWatch.Lock()
-	defer xs.muWatch.Unlock()
-	v := []byte(path + "\x00" + token + "\x00")
+func (xs *XenStore) add_watch(path string) error {
+	v := []byte(path + "\x00" + path + "\x00")
 	req := &Packet{
 		OpCode: XS_WATCH,
 		Req:    0,
@@ -506,23 +377,79 @@ func (xs *XenStore) Watch(path string, token string) error {
 		Value:  v,
 	}
 	_, err := xs.DO(req)
-	if err != nil {
-		xs.logger.Printf("Watch failed with error %#v\n", err)
-		return err
-	}
-	xs.watchQueue.AddChanByKey(path)
-	go xs.onceWatch.Do(watcher)
-	return nil
+	return err
 }
 
-func (xs *XenStore) WatchEvent(key string) (token string, ok bool) {
-	return xs.watchQueue.GetEventByKey(key)
+func (xs *XenStore) read_watch() {
+	type XSData struct {
+		*Packet
+		Error error
+	}
+
+	xsDataChan := make(chan XSData, 100)
+	readStoppedChan := make(chan struct{}, 1)
+	xs.nonWatchQueue = make(chan []byte, 100)
+
+	go func(r io.Reader, out chan<- XSData) {
+		for {
+			p, err := ReadPacket(r)
+			out <- XSData{Packet: p, Error: err}
+			if err != nil {
+				readStoppedChan <- struct{}{}
+				return
+			}
+		}
+	}(xs.xbFileReader, xsDataChan)
+
+	go func(xsDtaChan chan XSData) {
+		for {
+			select {
+			case <-xs.watchStopChan:
+				close(xs.outEvent)
+				xs.Close()
+				<-readStoppedChan
+				xs.watchStoppedChan <- struct{}{}
+				return
+			case xsdata := <-xsDataChan:
+				if xsdata.Error != nil {
+					close(xs.outEvent)
+					xs.watchStoppedChan <- struct{}{}
+					return
+				}
+				switch xsdata.Packet.OpCode {
+				case XS_WATCH_EVENT:
+					parts := strings.SplitN(string(xsdata.Value), "\x00", 2)
+					if len(parts) == EVENT_MAXNUM {
+						xs.outEvent <- Event{parts[EVENT_PATH], parts[EVENT_TOKEN]}
+					}
+				default:
+					var b bytes.Buffer
+					xsdata.Packet.Write(&b)
+					xs.nonWatchQueue <- b.Bytes()
+				}
+			}
+		}
+	}(xsDataChan)
+}
+
+func (xs *XenStore) Watch(path []string) (chan Event, error) {
+	xs.onceWatch.Do(xs.read_watch)
+	for _, p := range path {
+		if err := xs.add_watch(p); err != nil {
+			fmt.Fprintf(os.Stderr, "failed to add watch: %s\n", p)
+			xs.StopWatch()
+			return nil, err
+		}
+	}
+	return xs.outEvent, nil
 }
 
 func (xs *XenStore) StopWatch() error {
-	xs.watchStopChan <- struct{}{}
-	xs.nonWatchQueue = nil
-	<-xs.watchStoppedChan
+	if xs.nonWatchQueue != nil {
+		xs.watchStopChan <- struct{}{}
+		<-xs.watchStoppedChan
+		xs.nonWatchQueue = nil
+	}
 	return nil
 }
 
@@ -608,16 +535,8 @@ func (xs *CachedXenStore) SetPermission(path string, perms []Permission) error {
 	return xs.xs.SetPermission(path, perms)
 }
 
-func (xs *CachedXenStore) Watch(path string, token string) error {
-	return xs.xs.Watch(path, token)
-}
-
-func (xs *CachedXenStore) WatchEvent(key string) (token string, ok bool) {
-	return xs.xs.WatchEvent(key)
-}
-
-func (xs *CachedXenStore) UnWatch(path string, token string) error {
-	return xs.xs.UnWatch(path, token)
+func (xs *CachedXenStore) Watch(path []string) (chan Event, error) {
+	return xs.xs.Watch(path)
 }
 
 func (xs *CachedXenStore) StopWatch() error {
