@@ -24,7 +24,8 @@ func usage() {
                 rm key [ key ... ]
                 exists key [ key ... ]
                 ls [ key ... ]
-                chmod key mode [modes...]`)
+                chmod key mode [modes...]
+                watch [-n NR] key [ key ... ]`)
 }
 
 func new_xs() xenstoreclient.XenStoreClient {
@@ -272,6 +273,51 @@ func xs_chmod(script_name string, args []string) {
 	}
 }
 
+func xs_watch_die(script_name string) {
+	die("Usage: %s [-n NR] key [ key ... ]", script_name)
+}
+
+func xs_watch(script_name string, args []string) {
+	if len(args) == 0 || args[0] == "-h" {
+		xs_watch_die(script_name)
+	}
+
+	nr, index := 0, 0
+	if strings.HasPrefix(args[0], "-n") {
+		if len(args[0]) > 2 {
+			n, err := strconv.Atoi(args[0][2:])
+			if err != nil || n < 1 || len(args) == 1 {
+				xs_watch_die(script_name)
+			}
+			nr = n
+			index = 1
+		} else if len(args) > 2 {
+			n, err := strconv.Atoi(args[1])
+			if err != nil || n < 1 {
+				xs_watch_die(script_name)
+			}
+			nr = n
+			index = 2
+		} else {
+			xs_watch_die(script_name)
+		}
+	}
+
+	xs := new_xs()
+	if out, err := xs.Watch(args[index:]); err == nil {
+		for i := 0; nr == 0 || i < nr; i++ {
+			if e, ok := <-out; ok {
+				fmt.Println(e.Path)
+			} else {
+				os.Exit(1)
+			}
+		}
+		xs.StopWatch()
+	} else {
+		os.Exit(1)
+	}
+}
+
 func main() {
 	var operation string
 	var args []string
@@ -304,6 +350,8 @@ func main() {
 		xs_ls(script_name, args)
 	case "chmod":
 		xs_chmod(script_name, args)
+	case "watch":
+		xs_watch(script_name, args)
 	default:
 		usage()
 	}
