@@ -56,10 +56,10 @@ cp %{SOURCE5} %{buildroot}/usr/share/doc/%{name}-%{version}/examples/
 
 install -d %{buildroot}/usr/bin/
 install -m 755 %{SOURCE6}  %{buildroot}/usr/bin/xenstore
-ln -s /usr/bin/xenstore %{buildroot}/usr/bin/xenstore-read
-ln -s /usr/bin/xenstore %{buildroot}/usr/bin/xenstore-write
-ln -s /usr/bin/xenstore %{buildroot}/usr/bin/xenstore-exists
-ln -s /usr/bin/xenstore %{buildroot}/usr/bin/xenstore-rm
+ln -s xenstore %{buildroot}/usr/bin/xenstore-read
+ln -s xenstore %{buildroot}/usr/bin/xenstore-write
+ln -s xenstore %{buildroot}/usr/bin/xenstore-exists
+ln -s xenstore %{buildroot}/usr/bin/xenstore-rm
 
 cp %{SOURCE9} %{buildroot}/etc/udev/rules.d/z10-xen-vcpu-hotplug.rules
 
