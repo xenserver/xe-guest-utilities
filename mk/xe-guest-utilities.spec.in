@@ -60,6 +60,10 @@ ln -s xenstore %{buildroot}/usr/bin/xenstore-read
 ln -s xenstore %{buildroot}/usr/bin/xenstore-write
 ln -s xenstore %{buildroot}/usr/bin/xenstore-exists
 ln -s xenstore %{buildroot}/usr/bin/xenstore-rm
+ln -s xenstore %{buildroot}/usr/bin/xenstore-list
+ln -s xenstore %{buildroot}/usr/bin/xenstore-ls
+ln -s xenstore %{buildroot}/usr/bin/xenstore-chmod
+ln -s xenstore %{buildroot}/usr/bin/xenstore-watch
 
 cp %{SOURCE9} %{buildroot}/etc/udev/rules.d/z10-xen-vcpu-hotplug.rules
 
