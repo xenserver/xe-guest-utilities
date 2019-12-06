@@ -19,8 +19,13 @@ type SysLoggerWriter struct {
 	stdin io.WriteCloser
 }
 
-func NewSyslogWriter(topic string) (io.Writer, error) {
-	cmd := exec.Command("logger", "-t", topic)
+func NewSyslogWriter(topic string, debug bool) (io.Writer, error) {
+	// set lower priority by default
+	priority := "debug"
+	if debug {
+		priority = "notice"
+	}
+	cmd := exec.Command("logger", "-t", topic, "-p", priority)
 
 	stdin, err := cmd.StdinPipe()
 	if err != nil {

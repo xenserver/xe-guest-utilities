@@ -28,7 +28,7 @@ func main() {
 	var err error
 
 	sleepInterval := flag.Int("i", 60, "Interval between updates (in seconds)")
-	debugFlag := flag.Bool("d", false, "Update to stdout rather than xenstore")
+	debugFlag := flag.Bool("d", false, "Update to log in addition to xenstore")
 	balloonFlag := flag.Bool("B", true, "Do not report that ballooning is supported")
 	pid := flag.String("p", "", "Write the PID to FILE")
 
@@ -43,7 +43,7 @@ func main() {
 
 	var loggerWriter io.Writer = os.Stderr
 	var topic string = LoggerName
-	if w, err := syslog.NewSyslogWriter(topic); err == nil {
+	if w, err := syslog.NewSyslogWriter(topic, *debugFlag); err == nil {
 		loggerWriter = w
 		topic = ""
 	} else {
