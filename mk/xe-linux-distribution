@@ -477,6 +477,38 @@ identify_gooroom()
     write_to_output "${distro}" "${major}" "${minor}" "${description}"
 }
 
+identify_tmax()
+{
+    tmax_release="$1"
+    local distro
+    local major
+    local minor
+    local description
+
+    if [ ! -f "${tmax_release}" ] ; then
+	return 1
+    fi
+
+    eval $(sed -rn 's/^DISTRIB_ID=(.*)$/distro=\1;/gp;' ${tmax_release})
+    if [ ${distro} != "TmaxOS" ] ; then
+	return 1
+    fi
+
+    eval $(sed -rn 's/^DISTRIB_RELEASE=([0-9]).([0-9]*).([0-9])$/major=\1;minor=\2;/gp;' ${tmax_release})
+
+    if [ -z "${major}" ] ; then
+        return 1
+    fi
+
+    if [ -z "${minor}" ] ; then
+        minor=0
+    fi
+
+    eval $(sed -rn 's/^DISTRIB_DESCRIPTION=(.*)$/description=\1;/gp;' ${tmax_release})
+
+    write_to_output "${distro}" "${major}" "${minor}" "${description}"
+}
+
 identify_boot2docker()
 {
     boot2docker_release="$1"
@@ -514,6 +546,7 @@ if [ -z "${TEST}" ] ; then
     identify_yinhe /etc/kylin-build   && exit 0
     identify_linx /etc/linx-release   && exit 0
     identify_gooroom /etc/lsb-release && exit 0
+    identify_tmax /etc/lsb-release && exit 0
     identify_lsb lsb_release         && exit 0
     identify_debian /etc/debian_version && exit 0
     identify_boot2docker /etc/boot2docker && exit 0
