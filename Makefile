@@ -21,7 +21,11 @@ OBJECTS += $(OBJECTDIR)/xenstore
 PACKAGE = xe-guest-utilities
 VERSION = $(PRODUCT_VERSION)
 RELEASE := $(shell git rev-list HEAD | wc -l)
-ARCH := $(shell go version|awk -F'/' '{print $$2}')
+ifeq ($(GOARCH),)
+        ARCH := $(shell go version|awk -F'/' '{print $$2}')
+else
+        ARCH := $(GOARCH)
+endif
 
 ifeq ($(ARCH), amd64)
 	ARCH = x86_64
