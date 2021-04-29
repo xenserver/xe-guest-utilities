@@ -57,7 +57,7 @@ func (c *Collector) CollectMisc() (GuestMetric, error) {
 
 func (c *Collector) CollectMemory() (GuestMetric, error) {
 	current := make(GuestMetric, 0)
-	f, err := os.OpenFile("/proc/meminfo", os.O_RDONLY, 0666)
+	f, err := os.Open("/proc/meminfo")
 	if err != nil {
 		return nil, err
 	}
