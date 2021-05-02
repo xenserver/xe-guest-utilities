@@ -124,6 +124,9 @@ identify_redhat()
     # CentOS release 5 (Final)
     # CentOS Linux release 7.0.1406 (Core)
 
+    # distro=rocky
+    # Rocky Linux release 8.3
+
     # distro=scientific
     # Scientific Linux release 6.5 (Carbon)
 
@@ -148,6 +151,7 @@ identify_redhat()
                -e 's/^CentOS release \([0-9]*\)\.\([0-9]*\) (.*)/distro=centos;major=\1;minor=\2/gp;' \
                -e 's/^CentOS release \([0-9]*\) (.*)/distro=centos;major=\1/gp;' \
                -e 's/^CentOS Linux release \([0-9]*\)\.\([0-9]*\).*$/distro=centos;major=\1;minor=\2/gp;' \
+               -e 's/^Rocky Linux release \([0-9]*\)\.\([0-9]*\).*$/distro=rocky;major=\1;minor=\2/gp;' \
                -e 's/^Enterprise Linux Enterprise Linux .* release \([0-9]*\)\.\([0-9]*\) (.*)$/distro=oracle;major=\1;minor=\2;/gp;' \
                -e 's/^Enterprise Linux Enterprise Linux .* release \([0-9]*\) (.*)$/distro=oracle;major=\1/gp;' \
                -e 's/^Oracle Linux Server release \([0-9]*\)\.\([0-9]*\)$/distro=oracle;major=\1;minor=\2/gp;' \
@@ -505,6 +509,8 @@ if [ -z "${TEST}" ] ; then
     identify_kylin  /etc/neokylin-release  && exit 0
     identify_redhat /etc/oracle-release && exit 0
     identify_redhat /etc/enterprise-release && exit 0
+    #identify Rocky before CentOS and RHEL, as Rocky has both, centos-release and redhat-release
+    identify_redhat /etc/rocky-release && exit 0
     identify_redhat /etc/centos-release && exit 0
     identify_redhat /etc/redhat-release && exit 0
     #identify SuSE-release before, as previous version of SUSE or other distros also have os-release
