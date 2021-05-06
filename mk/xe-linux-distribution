@@ -159,6 +159,7 @@ identify_redhat()
                -e 's/^Oracle Linux Server release \([0-9]*\)\.\([0-9]*\)$/distro=oracle;major=\1;minor=\2/gp;' \
                -e 's/^Scientific Linux SL release \([0-9]*\)\.\([0-9]*\) (.*)$/distro=scientific;major=\1;minor=\2;/gp;' \
                -e 's/^Scientific Linux release \([0-9]*\)\.\([0-9]*\) (.*)$/distro=scientific;major=\1;minor=\2;/gp;' \
+               -e 's/^AlmaLinux release \([0-9]*\)\.\([0-9]*\) (.*)$/distro=rhel;major=\1;minor=\2;/gp;' \
                          "${redhat_release}")
 
     if [ -z "${major}" -o -z "${distro}" ] ; then
