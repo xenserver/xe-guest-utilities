@@ -137,7 +137,7 @@ identify_redhat()
     # Oracle Linux Server release 5.6
     
     # distro=almalinux
-    # AlamaLinux release 8.3 (Purple Manul)
+    # AlmaLinux release 8.3 (Purple Manul)
     
     if [ ! -f "${redhat_release}" ] ; then
 	return 1
@@ -515,7 +515,7 @@ if [ -z "${TEST}" ] ; then
     identify_kylin  /etc/neokylin-release  && exit 0
     identify_redhat /etc/oracle-release && exit 0
     identify_redhat /etc/enterprise-release && exit 0
-    #identify Rocky or AlmaLinux before CentOS and RHEL, as Rocky and AlamaLinux both have centos-release and redhat-release
+    #identify Rocky or AlmaLinux before CentOS and RHEL, as Rocky and AlmaLinux both have centos-release and redhat-release
     identify_redhat /etc/rocky-release && exit 0
     identify_redhat /etc/almalinux-release && exit 0
     identify_redhat /etc/centos-release && exit 0
