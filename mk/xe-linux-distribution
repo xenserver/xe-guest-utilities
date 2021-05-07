@@ -43,12 +43,12 @@ write_to_output()
     local uname=$(uname -r)
 
     if [ -n "${TEST_RESULT}" ] ; then
-	MAJOR=$major
-	MINOR=$minor
-	DISTRO=$distro
-	UNAME=$uname
-	NAME=$name
-	return 0
+        MAJOR=$major
+        MINOR=$minor
+        DISTRO=$distro
+        UNAME=$uname
+        NAME=$name
+        return 0
     fi
 
     echo "os_distro=\"${distro}\""
@@ -71,7 +71,7 @@ identify_debian()
     # Ignores testing and unstable which contain ".*/sid".
 
     if [ ! -f "${debian_version}" ] ; then
-	return 1
+        return 1
     fi
 
     eval $(awk -F. '/^[0-9]*\.[0-9]*/ \
@@ -79,7 +79,7 @@ identify_debian()
                    "${debian_version}")
     
     if [ -z "${major}" ] && [ -z "${minor}" ] && ! grep -q /sid "${debian_version}" ; then
-	return 1
+        return 1
     fi
 
     write_to_output "debian" "${major}" "${minor}" "Debian $(head -n 1 $debian_version)"
@@ -140,7 +140,7 @@ identify_redhat()
     # AlmaLinux release 8.3 (Purple Manul)
     
     if [ ! -f "${redhat_release}" ] ; then
-	return 1
+        return 1
     fi
 
     eval $(sed -nr \
@@ -175,13 +175,13 @@ identify_redhat()
 
     # HACK to handle RHEL betas
     if [ "${distro}" == "rhel" ] && [ ${minor} -gt 90 ] ; then
-    	major=$(expr ${major} + 1 )
-	minor=0
-	beta=Beta
+        major=$(expr ${major} + 1 )
+        minor=0
+        beta=Beta
     fi
 
     if [ -n "${beta}" ] ; then
-	minor="${minor}beta"
+        minor="${minor}beta"
     fi
 
     write_to_output "${distro}" "${major}" "${minor}" "$(head -n 1 ${redhat_release})"
@@ -232,12 +232,12 @@ identify_sles()
     fi
 
     eval $(sed -n \
-	       -e 's/^VERSION_ID="\([0-9]*\)\.\?\([0-9]*\)\?"$/major=\1;minor=\2;/gp' \
-	       -e 's/^PRETTY_NAME="SUSE L\(inux\|INUX\) Enterprise \([a-zA-Z0-9_]*\) \([0-9]*\)\( SP[0-9]*\)\?"/_major=\3;_pretty_name=\0;/gp' \
+               -e 's/^VERSION_ID="\([0-9]*\)\.\?\([0-9]*\)\?"$/major=\1;minor=\2;/gp' \
+               -e 's/^PRETTY_NAME="SUSE L\(inux\|INUX\) Enterprise \([a-zA-Z0-9_]*\) \([0-9]*\)\( SP[0-9]*\)\?"/_major=\3;_pretty_name=\0;/gp' \
                -e 's/^SUSE L\(inux\|INUX\) Enterprise \([a-zA-Z0-9_]*\) \([0-9]*\) (.*)/_major=\3;_pretty_name="\0";/gp;' \
                -e 's/^VERSION = \([0-9]*\)$/major=\1;/gp;' \
                -e 's/^PATCHLEVEL = \([0-9]*\)$/minor=\1;/gp;' \
-	       "${suse_release}")
+               "${suse_release}")
 
     if [ -z "${major}" -o -z "${_major}" ] ; then
         return 1
@@ -248,7 +248,7 @@ identify_sles()
     fi
 
     if [ -z "${minor}" ] ; then
-	minor=0
+        minor=0
     fi
 
     write_to_output "sles" "${major}" "${minor}" "${_pretty_name##*=}"
@@ -259,15 +259,15 @@ identify_lsb()
     lsb_release="$1"
 
     if [ ! -x "${lsb_release}" ] ; then
-	saved_IFS=$IFS
-	IFS=:
-	for i in $PATH ; do
-	    if [ -x "${i}/${lsb_release}" ] ; then
-		lsb_release="${i}/${lsb_release}"
-		break
-	    fi
-	done
-	IFS=$saved_IFS
+        saved_IFS=$IFS
+        IFS=:
+        for i in $PATH ; do
+            if [ -x "${i}/${lsb_release}" ] ; then
+                lsb_release="${i}/${lsb_release}"
+                break
+            fi
+        done
+        IFS=$saved_IFS
     fi
 
     if [ -x "${lsb_release}" ] ; then
@@ -286,7 +286,7 @@ identify_lsb()
     fi
 
     if [ -z "${distro}" -o -z "${release}" ] ; then
-	return 1
+        return 1
     fi
 
     eval $(echo $release | awk -F. -- '{ subindex = index($0,"."); \
@@ -345,7 +345,7 @@ identify_asianux()
     # 'Asianux Server 4 (Hiranya SP4)'
 
     if [ ! -f "${asianux_release}" ] ; then
-	return 1
+        return 1
     fi
 
     eval $(sed -rn \
@@ -375,7 +375,7 @@ identify_turbo()
     # GreatTurbo Enterprise Server release 12.2 (Theseus)
 
     if [ ! -f "${turbo_release}" ] ; then
-	return 1
+        return 1
     fi
 
     eval $(sed -rn \
@@ -406,7 +406,7 @@ identify_linx()
     
 
     if [ ! -f "${linx_release}" ] ; then
-	return 1
+        return 1
     fi
 
     eval $(sed -rn \
@@ -436,7 +436,7 @@ identify_yinhe()
     # Kylin 4.0
 
     if [ ! -f "${yinhe_release}" ] ; then
-	return 1
+        return 1
     fi
 
     eval $(sed -rn \
@@ -464,12 +464,12 @@ identify_gooroom()
     local description
 
     if [ ! -f "${gooroom_release}" ] ; then
-	return 1
+        return 1
     fi
 
     eval $(sed -rn 's/^DISTRIB_ID=(.*)$/distro=\1;/gp;' ${gooroom_release})
     if [ ${distro} != "Gooroom" ] ; then
-	return 1
+        return 1
     fi
 
     eval $(sed -rn 's/^DISTRIB_RELEASE=([0-9]).([0-9])$/major=\1;minor=\2;/gp;' ${gooroom_release})
@@ -533,7 +533,7 @@ if [ -z "${TEST}" ] ; then
 
 
     if [ $# -eq 1 ] ; then
-	rm -f "$1"
+        rm -f "$1"
     fi
 
     exit 1
