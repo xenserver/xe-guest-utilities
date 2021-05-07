@@ -136,6 +136,9 @@ identify_redhat()
     # Enterprise Linux Enterprise Linux Server release 5.5 (Carthage)
     # Oracle Linux Server release 5.6
     
+    # distro=almalinux
+    # AlamaLinux release 8.3 (Purple Manul)
+    
     if [ ! -f "${redhat_release}" ] ; then
 	return 1
     fi
@@ -159,6 +162,7 @@ identify_redhat()
                -e 's/^Oracle Linux Server release \([0-9]*\)\.\([0-9]*\)$/distro=oracle;major=\1;minor=\2/gp;' \
                -e 's/^Scientific Linux SL release \([0-9]*\)\.\([0-9]*\) (.*)$/distro=scientific;major=\1;minor=\2;/gp;' \
                -e 's/^Scientific Linux release \([0-9]*\)\.\([0-9]*\) (.*)$/distro=scientific;major=\1;minor=\2;/gp;' \
+               -e 's/^AlmaLinux release \([0-9]*\)\.\([0-9]*\) (.*)$/distro=almalinux;major=\1;minor=\2;/gp;' \
                          "${redhat_release}")
 
     if [ -z "${major}" -o -z "${distro}" ] ; then
@@ -511,8 +515,9 @@ if [ -z "${TEST}" ] ; then
     identify_kylin  /etc/neokylin-release  && exit 0
     identify_redhat /etc/oracle-release && exit 0
     identify_redhat /etc/enterprise-release && exit 0
-    #identify Rocky before CentOS and RHEL, as Rocky has both, centos-release and redhat-release
+    #identify Rocky or AlmaLinux before CentOS and RHEL, as Rocky and AlamaLinux both have centos-release and redhat-release
     identify_redhat /etc/rocky-release && exit 0
+    identify_redhat /etc/almalinux-release && exit 0
     identify_redhat /etc/centos-release && exit 0
     identify_redhat /etc/redhat-release && exit 0
     #identify SuSE-release before, as previous version of SUSE or other distros also have os-release
