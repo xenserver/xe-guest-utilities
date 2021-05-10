@@ -32,16 +32,16 @@ ifeq ($(ARCH), amd64)
 endif
 
 XE_DAEMON_SOURCES :=
-XE_DAEMON_SOURCES += ./xe-daemon/xe-daemon.go
-XE_DAEMON_SOURCES += ./syslog/syslog.go
-XE_DAEMON_SOURCES += ./system/system.go
-XE_DAEMON_SOURCES += ./guestmetric/guestmetric.go
-XE_DAEMON_SOURCES += ./guestmetric/guestmetric_linux.go
-XE_DAEMON_SOURCES += ./xenstoreclient/xenstore.go
+XE_DAEMON_SOURCES += xe-daemon/xe-daemon.go
+XE_DAEMON_SOURCES += syslog/syslog.go
+XE_DAEMON_SOURCES += system/system.go
+XE_DAEMON_SOURCES += guestmetric/guestmetric.go
+XE_DAEMON_SOURCES += guestmetric/guestmetric_linux.go
+XE_DAEMON_SOURCES += xenstoreclient/xenstore.go
 
 XENSTORE_SOURCES :=
-XENSTORE_SOURCES += ./xenstore/xenstore.go
-XENSTORE_SOURCES += ./xenstoreclient/xenstore.go
+XENSTORE_SOURCES += xenstore/xenstore.go
+XENSTORE_SOURCES += xenstoreclient/xenstore.go
 
 .PHONY: build
 build: $(DISTDIR)/$(PACKAGE)_$(VERSION)-$(RELEASE)_$(ARCH).tgz
