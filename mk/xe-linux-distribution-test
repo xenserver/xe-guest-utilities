@@ -51,6 +51,7 @@ do_test()
 }
 
 do_test "testcases/debian-sid"           "debian"
+do_test "testcases/debian-10.6"          "debian 10 6"
 do_test "testcases/rhel-3u6"             "rhel 3 6"
 do_test "testcases/rhel-3u8"             "rhel 3 8"
 do_test "testcases/rhel-4"               "rhel 4 0"
@@ -80,4 +81,10 @@ do_test "testcases/oracle-5u1"           "oracle 5 1"
 do_test "testcases/lsb-coreos-367.1.0"   "coreos 367 1.0"
 do_test "testcases/sle-15"               "sles 15 0"
 do_test "testcases/sle-15sp1"            "sles 15 1"
+do_test "testcases/centos7"              "centos 7 0"
+do_test "testcases/centos8.1"            "centos 8 1"
+do_test "testcases/centos8.3"            "centos 8 3"
+do_test "testcases/centos-stream-8"      "centos 8 0"
+do_test "testcases/rocky-8.3"            "rocky 8 3"
+do_test "testcases/almalinux-8.3"        "almalinux 8 3"
 exit 0
