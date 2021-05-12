@@ -23,30 +23,30 @@ do_test()
     TC=$1 ; shift
     TEST_RESULT=$@
     if test_identify ${TC} ; then
-	if [ X"${TEST_RESULT}" = X"FAIL" ] ; then
-	    echo "FAILED: ${TC}: should fail to parse" 1>&2
-	else
-	    set ${TEST_RESULT}
-	    if [ "$1" != "${DISTRO}" ] ; then
-		echo "FAILED: ${TC}: $1 $2.$3: distro ${DISTRO} != $1" 1>&2
-		exit 1
-	    fi
-	    if [ "$2" != "${MAJOR}" ] ; then
-		echo "FAILED: ${TC}: $1 $2.$3: major ${MAJOR} != $2" 1>&2
-		exit 1
-	    fi
-	    if [ "$3" != "${MINOR}" ] ; then
-		echo "FAILED: ${TC} $1 $2.$3: minor ${MINOR} != $3" 1>&2
-		exit 1
-	    fi
-	    echo "PASSED: ${TC}: ${DISTRO} ${MAJOR} ${MINOR} ${NAME} correctly detected" 1>&2
-	fi
+        if [ X"${TEST_RESULT}" = X"FAIL" ] ; then
+            echo "FAILED: ${TC}: should fail to parse" 1>&2
+        else
+            set ${TEST_RESULT}
+            if [ "$1" != "${DISTRO}" ] ; then
+                echo "FAILED: ${TC}: $1 $2.$3: distro ${DISTRO} != $1" 1>&2
+                exit 1
+            fi
+            if [ "$2" != "${MAJOR}" ] ; then
+                echo "FAILED: ${TC}: $1 $2.$3: major ${MAJOR} != $2" 1>&2
+                exit 1
+            fi
+            if [ "$3" != "${MINOR}" ] ; then
+                echo "FAILED: ${TC} $1 $2.$3: minor ${MINOR} != $3" 1>&2
+                exit 1
+            fi
+            echo "PASSED: ${TC}: ${DISTRO} ${MAJOR} ${MINOR} ${NAME} correctly detected" 1>&2
+        fi
     else
-	if [ X"${TEST_RESULT}" = X"FAIL" ] ; then
-	    echo "PASSED: ${TC}: correctly failed to parse" 1>&2
-	else
-	    echo "FAILED: ${TC}: unable to parse" 1>&2
-	fi
+        if [ X"${TEST_RESULT}" = X"FAIL" ] ; then
+            echo "PASSED: ${TC}: correctly failed to parse" 1>&2
+        else
+            echo "FAILED: ${TC}: unable to parse" 1>&2
+        fi
     fi
 }
 
