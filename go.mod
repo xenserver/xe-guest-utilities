@@ -1,4 +1,4 @@
-module xe-guest-utilities
+module github.com/xenserver/xe-guest-utilities
 
 go 1.16
 
