@@ -68,7 +68,7 @@ func (c *Collector) CollectMemory() (GuestMetric, error) {
 		switch parts[0] {
 		case "MemTotal":
 			current["meminfo_total"] = parts[1]
-		case "MemFree":
+		case "MemAvailable":
 			current["meminfo_free"] = parts[1]
 		}
 	}
