@@ -364,6 +364,35 @@ identify_asianux()
     write_to_output "${distro}" "${major}" "${minor}" "$(head -n 1 ${asianux_release})"
 }
 
+identify_sangoma()
+{
+    sangoma_release="$1"
+    local distro
+    local major
+    local minor
+
+    # distro
+    # 'Sangoma Linux (FreePBX)'
+
+    if [ ! -f "${sangoma_release}" ] ; then
+        return 1
+    fi
+
+    eval $(sed -rn \
+              's/^Sangoma Linux release ([0-9]*)\.([0-9]*).*$/distro=sangoma;major=\1;minor=\2/gp;' \
+              "${sangoma_release}")
+
+    if [ -z "${major}" -o -z "${distro}" ] ; then
+        return 1
+    fi
+
+    if [ -z "${minor}" ] ; then
+        minor=0
+    fi
+
+    write_to_output "${distro}" "${major}" "${minor}" "$(head -n 1 ${sangoma_release})"
+}
+
 identify_turbo()
 {
     turbo_release="$1"
@@ -520,6 +549,7 @@ if [ -z "${TEST}" ] ; then
     identify_redhat /etc/almalinux-release && exit 0
     identify_redhat /etc/centos-release && exit 0
     identify_redhat /etc/redhat-release && exit 0
+    identify_sangoma /etc/centos-release && exit 0
     #identify SuSE-release before, as previous version of SUSE or other distros also have os-release
     identify_sles /etc/SuSE-release && exit 0
     identify_sles /etc/os-release && exit 0
