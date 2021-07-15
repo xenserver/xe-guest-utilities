@@ -300,6 +300,37 @@ identify_lsb()
     write_to_output "${distro}" "${major}" "${minor}" "${description}"
 }
 
+identify_os_release()
+{
+    os_release="$1"
+    local major
+    local minor
+
+    # Use /etc/os-release to detect.
+    # NAME="SLES"
+    # VERSION="15"
+    # VERSION_ID="15"
+    # PRETTY_NAME="SUSE Linux Enterprise Server 15"
+    # ID="sles"
+    # ID_LIKE="suse"
+    # ANSI_COLOR="0;32"
+    # CPE_NAME="cpe:/o:suse:sles:15"
+
+    if [ ! -f "${os_release}" ] ; then
+        return 1
+    fi
+
+    source "${os_release}"
+
+    eval $(echo "$VERSION_ID" | \
+	    sed -n -e 's/^\([0-9]*\)\.\?\([0-9]*\).*$/major=\1;minor=\2;/gp')
+
+    major="${major:-unknown}"
+    minor="${minor:-unknown}"
+
+    write_to_output "${ID}" "${major}" "${minor}" "${PRETTY_NAME}"
+}
+
 identify_kylin()
 {
     kylin_release="$1"
@@ -530,6 +561,7 @@ if [ -z "${TEST}" ] ; then
     identify_lsb lsb_release         && exit 0
     identify_debian /etc/debian_version && exit 0
     identify_boot2docker /etc/boot2docker && exit 0
+    identify_os_release /etc/os-release && exit 0
 
 
     if [ $# -eq 1 ] ; then
