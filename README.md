@@ -20,58 +20,45 @@ Build Instructions
 ===================
 [Go development environment](https://golang.org/doc/install) is required to build the guest utilities.
 
+With modern go versions (later than 1.11)
+-----------
 Type `make` or `make build` to build the xenstore and xe-daemon.
 
-USE $GOPATH to build
+* The binarys will be in `build/obj`
+* In `build/stage` are all required files and where they go when installed.
+* In `build/dist` is a tarball with all files,symlinks and permissions.
+
+
+Older Go versions
 -----------
-e.g. use go1.6.4 to build
-1. Set GOPATH
 
-`export GOPATH=/root/go`
+Earliest version that has all required features is `1.10`
 
-2. Download xe-guest-utilities
+1. `GOPATH` 
 
-`mkdir -p $GOPATH/src; cd $GOPATH/src`
+Go gets librarys from the `GOPATH`, so for this to work, you need read/write permissions there.
+If in doubt, set `GOPATH` to a temporary location, ie: `export GOPATH=$(pwd)` sets `GOPATH` to the local folder
 
-`git clone git@github.com:xenserver/xe-guest-utilities.git`
-3. Disable GO111MODULE
+2. external library
 
-`export GO111MODULE=off`
+This project uses the `golang.org/x/sys/unix` library, so you will need to install that:
 
-4. Download golang.org/x/sys
+`go get golang.org/x/sys/unix`
 
-`mkdir -p $GOPATH/src/golang.org/x`
+this will install it and all its dependency's to `$GOPATH/src`.
 
-`cd $GOPATH/src/golang.org/x`
+3. Get this project
 
-`git clone http://github.com/golang/sys.git`
+For go to find all files in this project it needs to be in the `GOPATH`
+This is easiest done by just putting it into `$GOPATH/src/xe-guest-utilities`
 
-5. Build
+`git clone https://github.com/xenserver/xe-guest-utilities.git $GOPATH/src/xe-guest-utilities` 
 
-`cd $GOPATH/src/xe-guest-utilities`
+4 Build
 
-`make`
+Go into the right directory `cd $GOPATH/src/xe-guest-utilities/`
 
-Enable $GO111MODULE to build
------------
-e.g. use go1.6.4 to build
-1. Download xe-guest-utilities
+now you can `make build` or `make`.
 
-`cd /root`
+resulting files are in `build/`, same layout as explained above
 
-`git clone git@github.com:xenserver/xe-guest-utilities.git`
-2. Enable GO111MODULE
-
-`export GO111MODULE=on`
-
-3. Initializing a project
-
-`go mod init xe-guest-utilities`
-
-`go mod tidy`
-
-4. Build
-
-`cd /root/xe-guest-utilities.git`
-
-`make`
