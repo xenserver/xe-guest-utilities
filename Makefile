@@ -13,6 +13,7 @@ GOBUILDDIR = $(BUILDDIR)/gobuild
 STAGEDIR = $(BUILDDIR)/stage
 OBJECTDIR = $(BUILDDIR)/obj
 DISTDIR = $(BUILDDIR)/dist
+VENDORDIR = $(REPO)/vendor/$(shell basename $(REPO))
 
 OBJECTS :=
 OBJECTS += $(OBJECTDIR)/xe-daemon
@@ -51,6 +52,7 @@ clean:
 	$(RM) -rf $(BUILDDIR)
 
 $(DISTDIR)/$(PACKAGE)_$(VERSION)-$(RELEASE)_$(ARCH).tgz: $(OBJECTS)
+	$(info ***** Create build direcotry *****)
 	( mkdir -p $(DISTDIR) ; \
 	  install -d $(STAGEDIR)/etc/init.d/ ; \
 	  install -m 755 $(SOURCEDIR)/xe-linux-distribution.init $(STAGEDIR)/etc/init.d/xe-linux-distribution ; \
@@ -74,14 +76,25 @@ $(DISTDIR)/$(PACKAGE)_$(VERSION)-$(RELEASE)_$(ARCH).tgz: $(OBJECTS)
 	)
 
 $(OBJECTDIR)/xe-daemon: $(XE_DAEMON_SOURCES:%=$(GOBUILDDIR)/%)
+	$(info ***** Build xe-daemon ******)
+	(cd $(VENDORDIR) && ln -sfn ../../build/gobuild/guestmetric guestmetric)
+	(cd $(VENDORDIR) && ln -sfn ../../build/gobuild/syslog syslog)
+	(cd $(VENDORDIR) && ln -sfn ../../build/gobuild/system system)
+	(cd $(VENDORDIR) && ln -sfn ../../build/gobuild/xenstoreclient xenstoreclient)
 	mkdir -p $(OBJECTDIR)
 	$(GO_BUILD) $(GO_FLAGS) -o $@ $<
 
-$(OBJECTDIR)/xenstore: $(XENSTORE_SOURCES:%=$(GOBUILDDIR)/%) $(GOROOT)
+$(OBJECTDIR)/xenstore: $(XENSTORE_SOURCES:%=$(GOBUILDDIR)/%) 
+	$(info ***** Build xenstore ******)
 	mkdir -p $(OBJECTDIR)
 	$(GO_BUILD) $(GO_FLAGS) -o $@ $<
+	(cd $(VENDORDIR) && ln -sfn ../../guestmetric guestmetric)
+	(cd $(VENDORDIR) && ln -sfn ../../syslog syslog)
+	(cd $(VENDORDIR) && ln -sfn ../../system system)
+	(cd $(VENDORDIR) && ln -sfn ../../xenstoreclient xenstoreclient)
 
 $(GOBUILDDIR)/%: $(REPO)/%
+	$(info ****** Replace product version for: [$<] *****)
 	mkdir -p $$(dirname $@)
 	cat $< | \
 	sed -e "s/@PRODUCT_MAJOR_VERSION@/$(PRODUCT_MAJOR_VERSION)/g" | \
@@ -89,4 +102,3 @@ $(GOBUILDDIR)/%: $(REPO)/%
 	sed -e "s/@PRODUCT_MICRO_VERSION@/$(PRODUCT_MICRO_VERSION)/g" | \
 	sed -e "s/@NUMERIC_BUILD_NUMBER@/$(RELEASE)/g" \
 	> $@
-
