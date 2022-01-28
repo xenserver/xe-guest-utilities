@@ -182,7 +182,7 @@ func (c *Collector) CollectNetworkAddr() (GuestMetric, error) {
 	current := make(GuestMetric, 0)
 
 	var paths []string
-	vifNamePrefixList := [...]string{"eth", "eno", "ens", "emp", "enx"}
+	vifNamePrefixList := [...]string{"eth", "eno", "ens", "emp", "enx", "enX"}
 	for _, prefix := range vifNamePrefixList {
 		prefixPaths, err := filepath.Glob(fmt.Sprintf("/sys/class/net/%s*", prefix))
 		if err != nil {
