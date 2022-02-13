@@ -535,6 +535,26 @@ identify_boot2docker()
 
 }
 
+identify_slackware()
+{
+    # distro
+    # 'Slackware Linux'
+    local slackware_version="$1"
+    local major
+    local minor
+    if [ ! -f "${slackware_version}" ] ; then
+        return 1
+    fi
+    eval $(sed -n \
+               -e 's/^Slackware \([0-9]*\)\.\([0-9]*\).*$/distro=slackware;major=\1;minor=\2/gp;' \
+                         "${slackware_version}")
+    if [ -z "${major}" -o -z "${distro}" -o -z "${minor}" ] ; then
+        return 1
+    fi
+
+    write_to_output "${distro}" "${major}" "${minor}" "$(head -n 1 ${slackware_version})"
+}
+
 if [ $# -eq 1 ] ; then
     exec 1>"$1"
 fi
@@ -562,6 +582,7 @@ if [ -z "${TEST}" ] ; then
     identify_debian /etc/debian_version && exit 0
     identify_boot2docker /etc/boot2docker && exit 0
     identify_os_release /etc/os-release && exit 0
+    identify_slackware /etc/slackware-version && exit 0
 
 
     if [ $# -eq 1 ] ; then
