@@ -15,6 +15,7 @@ test_identify()
     identify_debian "${1}" || \
     identify_redhat "${1}" || \
     identify_sles   "${1}" || \
+    identify_os_release "${1}" || \
     return 1
 }
 
@@ -87,4 +88,5 @@ do_test "testcases/centos8.3"            "centos 8 3"
 do_test "testcases/centos-stream-8"      "centos 8 0"
 do_test "testcases/rocky-8.3"            "rocky 8 3"
 do_test "testcases/almalinux-8.3"        "almalinux 8 3"
+do_test "testcases/slackware-15.0"       "slackware 15 0"
 exit 0
