@@ -250,7 +250,7 @@ func (c *Collector) CollectDisk() (GuestMetric, error) {
 				return nil, err
 			}
 			blocksize := 512
-			if bs, err := readSysfs(fmt.Sprintf("/sys/block/%s/queue/physical_block_size", p)); err == nil {
+			if bs, err := readSysfs(fmt.Sprintf("/sys/block/%s/queue/physical_block_size", disk)); err == nil {
 				if bs1, err := strconv.Atoi(bs); err == nil {
 					blocksize = bs1
 				}
