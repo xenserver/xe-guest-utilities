@@ -6,6 +6,11 @@ Introduction
 This is the golang guest utilities for Citrix Hypervisor
 
 
+XenStore golang client library
+-----------
+xe-guest-utilities.git/xenstoreclient
+
+
 XenStore CLI
 -----------
 xe-guest-utilities.git/xenstore
@@ -62,3 +67,45 @@ now you can `make build` or `make`.
 
 resulting files are in `build/`, same layout as explained above
 
+
+Collected information, by lifetime
+===================
+
+static
+-----------
+
+* from /var/cache/xe-linux-distribution
+  * data/os_*
+* compiled in
+  * attr/PVAddons/Installed = 1
+  * attr/PVAddons/MajorVersion
+  * attr/PVAddons/MinorVersion
+  * attr/PVAddons/MicroVersion
+  * attr/PVAddons/BuildVersion
+* runtime-dependant
+  * control/feature-balloon = [01]
+
+changes on event (network config, hotplug, resume, migration...)
+-----------
+
+* from ifconfig/ip
+  * attr/vif/$VIFID/ipv[46]/%d = $ADDR
+  * xenserver/attr/net-sriov-vf/$VIFID/ipv[46]/%d = $ADDR
+* from pvs, mount, /sys/block/, xenstore
+  * data/volumes/%d/...
+    * .../extents/0 = $BACKEND
+    * .../name = /dev/xvd$X$N($PARTUUID) or /dev/xvd$X$N
+    * .../size = $SIZE_IN_BYTES
+    * .../mount_points/0 = $DIR or "[LVM]"
+    * .../filesystem = $FSTYPE
+* from /proc/meminfo
+  * data/meminfo_total (or even static?)
+
+ephemeral
+-----------
+
+* from /proc/meminfo
+  * data/meminfo_free
+* from pvs or free
+  * data/volumes/%d/free
+* data/updated: date of last update
