@@ -1,6 +1,6 @@
-PRODUCT_MAJOR_VERSION=6
-PRODUCT_MINOR_VERSION=6
-PRODUCT_MICRO_VERSION=80
+PRODUCT_MAJOR_VERSION=7
+PRODUCT_MINOR_VERSION=31
+PRODUCT_MICRO_VERSION=0
 PRODUCT_VERSION = $(PRODUCT_MAJOR_VERSION).$(PRODUCT_MINOR_VERSION).$(PRODUCT_MICRO_VERSION)
 
 GO_BUILD = go build
@@ -77,10 +77,6 @@ $(DISTDIR)/$(PACKAGE)_$(VERSION)-$(RELEASE)_$(ARCH).tgz: $(OBJECTS)
 
 $(OBJECTDIR)/xe-daemon: $(XE_DAEMON_SOURCES:%=$(GOBUILDDIR)/%)
 	$(info ***** Build xe-daemon ******)
-	(cd $(VENDORDIR) && ln -sfn ../../build/gobuild/guestmetric guestmetric)
-	(cd $(VENDORDIR) && ln -sfn ../../build/gobuild/syslog syslog)
-	(cd $(VENDORDIR) && ln -sfn ../../build/gobuild/system system)
-	(cd $(VENDORDIR) && ln -sfn ../../build/gobuild/xenstoreclient xenstoreclient)
 	mkdir -p $(OBJECTDIR)
 	$(GO_BUILD) $(GO_FLAGS) -o $@ $<
 
@@ -88,10 +84,6 @@ $(OBJECTDIR)/xenstore: $(XENSTORE_SOURCES:%=$(GOBUILDDIR)/%)
 	$(info ***** Build xenstore ******)
 	mkdir -p $(OBJECTDIR)
 	$(GO_BUILD) $(GO_FLAGS) -o $@ $<
-	(cd $(VENDORDIR) && ln -sfn ../../guestmetric guestmetric)
-	(cd $(VENDORDIR) && ln -sfn ../../syslog syslog)
-	(cd $(VENDORDIR) && ln -sfn ../../system system)
-	(cd $(VENDORDIR) && ln -sfn ../../xenstoreclient xenstoreclient)
 
 $(GOBUILDDIR)/%: $(REPO)/%
 	$(info ****** Replace product version for: [$<] *****)
