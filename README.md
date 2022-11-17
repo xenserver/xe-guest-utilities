@@ -3,7 +3,7 @@
 Introduction
 ===================
 
-This is the golang guest utilities for Citrix Hypervisor
+This is the golang guest utilities for XenServer
 
 
 XenStore golang client library
@@ -16,7 +16,7 @@ XenStore CLI
 xe-guest-utilities.git/xenstore
 
 
-Citrix Hypervisor Guest Utilities
+XenServer Guest Utilities
 -----------
 xe-guest-utilities.git/xe-daemon
 
