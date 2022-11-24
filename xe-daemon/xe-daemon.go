@@ -11,10 +11,11 @@ import (
 	"strconv"
 	"syscall"
 	"time"
-	guestmetric "xe-guest-utilities/guestmetric"
-	syslog "xe-guest-utilities/syslog"
-	system "xe-guest-utilities/system"
-	xenstoreclient "xe-guest-utilities/xenstoreclient"
+
+	guestmetric "github.com/xenserver/xe-guest-utilities/guestmetric"
+	syslog "github.com/xenserver/xe-guest-utilities/syslog"
+	system "github.com/xenserver/xe-guest-utilities/system"
+	xenstoreclient "github.com/xenserver/xe-guest-utilities/xenstoreclient"
 )
 
 const (

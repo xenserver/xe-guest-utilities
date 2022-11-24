@@ -4,13 +4,13 @@ import (
 	"bufio"
 	"bytes"
 	"fmt"
+	xenstoreclient "github.com/xenserver/xe-guest-utilities/xenstoreclient"
 	"os"
 	"path/filepath"
 	"regexp"
 	"sort"
 	"strconv"
 	"strings"
-	xenstoreclient "xe-guest-utilities/xenstoreclient"
 )
 
 type Collector struct {
