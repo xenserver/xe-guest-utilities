@@ -52,11 +52,9 @@ SOURCES += $(SOURCEDIR)/xe-linux-distribution
 SOURCES += $(SOURCEDIR)/xe-daemon
 SOURCES += $(SOURCEDIR)/xenstore
 SOURCES += $(SOURCEDIR)/LICENSE
-SOURCES += $(SOURCEDIR)/citrix.list
 SOURCES += $(SOURCEDIR)/xen-vcpu-hotplug.rules
 SOURCES += $(DEBIANDIR)/xe-linux-distribution.init
 SOURCES += $(DEBIANDIR)/xe-guest-utilities.postinst
-SOURCES += $(DEBIANDIR)/xe-guest-utilities.prerm
 SOURCES += $(DEBIANDIR)/control
 SOURCES += $(DEBIANDIR)/changelog
 SOURCES += $(DEBIANDIR)/rules
@@ -94,9 +92,6 @@ $(DEBIANDIR)/xe-linux-distribution.init: $(REPO)/mk/xe-linux-distribution.init
 $(SOURCEDIR)/%: $(REPO)/mk/%
 	mkdir -p $(SOURCEDIR)
 	$(call brand,$<) | $(call local-brand) > $@
-
-$(SOURCEDIR)/citrix.list: citrix.list
-	$(call brand,$<) > $@
 
 $(SOURCEDIR)/xe-daemon: $(XE_DAEMON_GO_SOURCES:%=$(GOBUILDDIR)/%) $(GOROOT)
 	$(GOBIN) build $(GOFLAGS) -o $@ $<

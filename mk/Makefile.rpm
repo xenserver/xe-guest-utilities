@@ -50,7 +50,6 @@ SOURCES += $(RPM_SOURCESDIR)/xe-linux-distribution.init
 SOURCES += $(RPM_SOURCESDIR)/xe-daemon
 SOURCES += $(RPM_SOURCESDIR)/xenstore
 
-SOURCES += $(RPM_SOURCESDIR)/Citrix.repo
 SOURCES += $(RPM_SOURCESDIR)/xen-vcpu-hotplug.rules
 SOURCES += $(RPM_SOURCESDIR)/LICENSE
 

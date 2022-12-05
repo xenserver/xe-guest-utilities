@@ -42,8 +42,6 @@ binary-arch: build
 
 	dh_installinit --name xe-linux-distribution
 
-	dh_install citrix.list /usr/share/xe-guest-utilities
-
 	dh_installdocs LICENSE
 
 	dh_strip

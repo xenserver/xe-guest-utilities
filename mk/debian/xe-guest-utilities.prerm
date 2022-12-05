@@ -1,7 +1,0 @@
-#!/bin/sh
-
-if [ X"$1" = X"remove" ] && [ -e /etc/apt/sources.list.d/citrix.list ] ; then
-    rm /etc/apt/sources.list.d/citrix.list
-fi
-
-#DEBHELPER#
