@@ -53,7 +53,6 @@ SOURCES += $(SOURCEDIR)/xe-linux-distribution
 SOURCES += $(SOURCEDIR)/xe-linux-distribution.init
 SOURCES += $(SOURCEDIR)/xe-daemon
 SOURCES += $(SOURCEDIR)/xenstore
-SOURCES += $(SOURCEDIR)/citrix.list
 SOURCES += $(SOURCEDIR)/xen-vcpu-hotplug.rules
 
 822_DATE := $(shell date -R)
@@ -78,8 +77,6 @@ $(SOURCEDIR)/%: $(REPO)/mk/%
 	mkdir -p $(SOURCEDIR)
 	$(call brand,$<) | $(call local-brand) > $@
 
-$(SOURCEDIR)/citrix.list: citrix.list
-	$(call brand,$<) > $@
 
 $(SOURCEDIR)/xe-daemon: $(XE_DAEMON_GO_SOURCES:%=$(GOBUILDDIR)/%) $(GOROOT)
 	$(GOBIN) build $(GOFLAGS) -o $@ $<
