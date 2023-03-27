@@ -12,6 +12,7 @@ test_identify()
 {
     export TESTCASE=$1
     identify_lsb    testcases/lsb || \
+    identify_gooroom "${1}" || \
     identify_debian "${1}" || \
     identify_redhat "${1}" || \
     identify_sles   "${1}" || \
@@ -53,6 +54,38 @@ do_test()
 
 do_test "testcases/debian-sid"           "debian"
 do_test "testcases/debian-10.6"          "debian 10 6"
+do_test "testcases/fc3"                  "fedora 3 0"
+do_test "testcases/ddk-0.5.6-2991c"      "xe-ddk 0.5.6 2991c"
+do_test "testcases/sdk-0.5.6-2991c"      "xe-sdk 0.5.6 2991c"
+do_test "testcases/sle-15"               "sles 15 0"
+do_test "testcases/sle-15sp1"            "sles 15 1"
+do_test "testcases/centos7"              "centos 7 0"
+do_test "testcases/centos-stream-8"      "centos 8 0"
+do_test "testcases/rocky-8.3"            "rocky 8 3"
+do_test "testcases/almalinux-8.3"        "almalinux 8 3"
+do_test "testcases/slackware-15.0"       "slackware 15 0"
+
+# Newly added test cases
+do_test "testcases/centos7.9"            "centos 7 9"
+do_test "testcases/rhel7.9"              "rhel 7 9"
+do_test "testcases/rhel8.7"              "rhel 8 7"
+do_test "testcases/sles12sp4"            "sles 12 4"
+do_test "testcases/sles12sp5"            "sles 12 5"
+do_test "testcases/sles15sp2"            "sles 15 2"
+do_test "testcases/sles15sp4"            "sles 15 4"
+do_test "testcases/centos6.10"           "centos 6 10"
+do_test "testcases/oracle7.9"            "oracle 7 9"
+do_test "testcases/oracle8.7"            "oracle 8 7"
+do_test "testcases/scientific7.6"        "scientific 7 6"
+do_test "testcases/rocky8.7"             "rocky 8 7"
+do_test "testcases/debian10.13"          "debian 10 13"
+do_test "testcases/debian11.6"           "debian 11 6"
+do_test "testcases/gooroom2"             "Gooroom 2 0"
+do_test "testcases/lsb-ubuntu1804"       "ubuntu 18 04"
+do_test "testcases/lsb-ubuntu2004"       "ubuntu 20 04"
+do_test "testcases/lsb-ubuntu2204"       "ubuntu 22 04"
+
+# EOL distributions test cases
 do_test "testcases/rhel-3u6"             "rhel 3 6"
 do_test "testcases/rhel-3u8"             "rhel 3 8"
 do_test "testcases/rhel-4"               "rhel 4 0"
@@ -66,27 +99,17 @@ do_test "testcases/rhel-5beta"           "rhel 5 0beta"
 do_test "testcases/rhel-5"               "rhel 5 0"
 do_test "testcases/rhel-5u1beta"         "rhel 5 1beta"
 do_test "testcases/rhel-5u1"             "rhel 5 1"
-do_test "testcases/fc3"                  "fedora 3 0"
 do_test "testcases/sles-9"               "sles 9 0"
 do_test "testcases/sles-9sp3"            "sles 9 3"
 do_test "testcases/sles-10sp2"           "sles 10 2"
 do_test "testcases/sles-11"              "sles 11 0"
-do_test "testcases/ddk-0.5.6-2991c"      "xe-ddk 0.5.6 2991c"
-do_test "testcases/sdk-0.5.6-2991c"      "xe-sdk 0.5.6 2991c"
 do_test "testcases/centos4"              "centos 4 0"
 do_test "testcases/centos5"              "centos 5 0"
+do_test "testcases/centos8.1"            "centos 8 1"
+do_test "testcases/centos8.3"            "centos 8 3"
 do_test "testcases/lsb-ubuntu-6.10"      "ubuntu 6 10"
 do_test "testcases/lsb-ubuntu-7.04"      "ubuntu 7 04"
 do_test "testcases/oracle-5"             "oracle 5 0"
 do_test "testcases/oracle-5u1"           "oracle 5 1"
 do_test "testcases/lsb-coreos-367.1.0"   "coreos 367 1.0"
-do_test "testcases/sle-15"               "sles 15 0"
-do_test "testcases/sle-15sp1"            "sles 15 1"
-do_test "testcases/centos7"              "centos 7 0"
-do_test "testcases/centos8.1"            "centos 8 1"
-do_test "testcases/centos8.3"            "centos 8 3"
-do_test "testcases/centos-stream-8"      "centos 8 0"
-do_test "testcases/rocky-8.3"            "rocky 8 3"
-do_test "testcases/almalinux-8.3"        "almalinux 8 3"
-do_test "testcases/slackware-15.0"       "slackware 15 0"
 exit 0
