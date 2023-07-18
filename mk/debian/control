@@ -1,7 +1,7 @@
 Source: xe-guest-utilities
 Section: main/admin
 Priority: optional
-Maintainer: Cloud Software Group Holdings, Inc.
+Maintainer: {{COPYRIGHT}}
 Standards-Version: 3.7.2
 Build-Depends: debhelper (>= 4.0.0)
 
