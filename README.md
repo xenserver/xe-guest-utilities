@@ -2,7 +2,7 @@
 
 # Introduction
 
-This is the golang guest utilities for {{PRODUCTNAME}}
+This is the guest utilitise on Xen Hypervisor
 
 
 XenStore golang client library
