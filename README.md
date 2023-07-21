@@ -2,7 +2,7 @@
 
 # Introduction
 
-This is the guest utilities on Xen Hypervisor
+This is the golang guest utilities for guest on Xen Hypervisor
 
 
 XenStore golang client library
