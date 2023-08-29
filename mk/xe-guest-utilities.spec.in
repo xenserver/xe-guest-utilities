@@ -41,6 +41,7 @@ mkdir -p %{buildroot}/usr/sbin/
 mkdir -p %{buildroot}/usr/share/doc/%{name}-%{version}/examples/
 mkdir -p %{buildroot}/etc/init.d
 mkdir -p %{buildroot}/etc/udev/rules.d
+mkdir -p %{buildroot}/usr/lib/systemd/system
 
 cp %{SOURCE0} %{buildroot}/usr/sbin/xe-linux-distribution
 chmod 755 %{buildroot}/usr/sbin/xe-linux-distribution
@@ -50,6 +51,9 @@ chmod 755 %{buildroot}/etc/init.d/xe-linux-distribution
 
 cp %{SOURCE3} %{buildroot}/usr/sbin/xe-daemon
 chmod 755 %{buildroot}/usr/sbin/xe-daemon
+
+cp mk/xe-linux-distribution.service %{buildroot}/usr/lib/systemd/system/xe-linux-distribution.service
+chmod 644 %{buildroot}/usr/lib/systemd/system/xe-linux-distribution.service
 
 cp %{SOURCE5} %{buildroot}/usr/share/doc/%{name}-%{version}/examples/
 
@@ -75,8 +79,16 @@ cp %{SOURCE8} %{buildroot}/usr/share/doc/%{name}-xenstore-%{version}/
 rm -rf %{buildroot}
 
 %post
-/sbin/chkconfig --add xe-linux-distribution >/dev/null
-[ -n "${EXTERNAL_P2V}" ] || service xe-linux-distribution start >/dev/null 2>&1
+#!/bin/bash
+if command -v systemctl >/dev/null 2>&1; then
+    xe_install_path=/usr/sbin
+    sed -i "s#/usr/share/oem/xs#$xe_install_path#g" /usr/lib/systemd/system/xe-linux-distribution.service
+    systemctl enable /usr/lib/systemd/system/xe-linux-distribution.service >/dev/null 2>&1
+    systemctl start xe-linux-distribution.service >/dev/null 2>&1
+else
+    /sbin/chkconfig --add xe-linux-distribution >/dev/null
+    [ -n "${EXTERNAL_P2V}" ] || service xe-linux-distribution start >/dev/null 2>&1
+fi
 
 eval $(/usr/sbin/xe-linux-distribution)
 
@@ -94,8 +106,13 @@ fi
 
 %preun
 if [ $1 -eq 0 ] ; then
-    service xe-linux-distribution stop >/dev/null 2>&1
-    /sbin/chkconfig --del xe-linux-distribution >/dev/null
+    if command -v systemctl >/dev/null 2>&1; then
+        systemctl stop xe-linux-distribution.service >/dev/null 2>&1
+        systemctl disable xe-linux-distribution.service >/dev/null 2>&1
+    else
+        service xe-linux-distribution stop >/dev/null 2>&1
+        /sbin/chkconfig --del xe-linux-distribution >/dev/null
+    fi
 fi
 
 %files 
@@ -105,6 +122,7 @@ fi
 /usr/sbin/xe-daemon
 /etc/udev/rules.d/z10-xen-vcpu-hotplug.rules
 /usr/share/doc/%{name}-%{version}/LICENSE
+/usr/lib/systemd/system/xe-linux-distribution.service
 
 %files xenstore
 %defattr(-,root,root,-)
