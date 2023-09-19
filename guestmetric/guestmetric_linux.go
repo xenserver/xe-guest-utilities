@@ -63,12 +63,18 @@ func (c *Collector) CollectMemory() (GuestMetric, error) {
 	}
 	defer f.Close()
 	scanner := bufio.NewScanner(f)
+	foundMemAvailabel := false
 	for scanner.Scan() {
 		parts := regexp.MustCompile(`\w+`).FindAllString(scanner.Text(), -1)
 		switch parts[0] {
 		case "MemTotal":
 			current["meminfo_total"] = parts[1]
+		case "MemFree":
+			if !foundMemAvailabel{
+				current["meminfo_free"] = parts[1]
+			} 
 		case "MemAvailable":
+			foundMemAvailabel = true
 			current["meminfo_free"] = parts[1]
 		}
 	}
