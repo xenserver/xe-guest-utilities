@@ -138,6 +138,12 @@ identify_redhat()
     
     # distro=almalinux
     # AlmaLinux release 8.3 (Purple Manul)
+
+    # FreePBX
+    # Sangoma Linux release 7.5.1805 (Core)
+
+    # Switchvox
+    # PBX build 94676
     
     if [ ! -f "${redhat_release}" ] ; then
         return 1
@@ -163,6 +169,8 @@ identify_redhat()
                -e 's/^Scientific Linux SL release \([0-9]*\)\.\([0-9]*\) (.*)$/distro=scientific;major=\1;minor=\2;/gp;' \
                -e 's/^Scientific Linux release \([0-9]*\)\.\([0-9]*\) (.*)$/distro=scientific;major=\1;minor=\2;/gp;' \
                -e 's/^AlmaLinux release \([0-9]*\)\.\([0-9]*\) (.*)$/distro=almalinux;major=\1;minor=\2;/gp;' \
+               -e 's/^Sangoma Linux release \([0-9]*\)\.\([0-9]*\)\(\.[0-9]*\)\? (.*)/distro=centos;major=\1;minor=\2/gp;' \
+	       -e 's/^PBX build [0-9].*/distro=centos;major=8;minor=0/gp;' \
                          "${redhat_release}")
 
     if [ -z "${major}" -o -z "${distro}" ] ; then
