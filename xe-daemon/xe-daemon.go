@@ -23,6 +23,10 @@ const (
 	DivisorOne           int    = 1
 	DivisorTwo           int    = 2
 	DivisorLeastMultiple int    = 2 // The least common multiple, ensure every collector done before executing InvalidCacheFlush.
+	SuspendStatusPath    string = "control/process_suspend_status"
+	SysFreezeTimeoutPath string = "/sys/power/pm_freeze_timeout"
+	DefaultTimeout       string = "20000"
+	ExtendedTimeout      string = "300000"
 )
 
 func main() {
@@ -67,6 +71,20 @@ func main() {
 		fmt.Fprint(os.Stderr, message)
 		return
 	}
+
+	// Reset pm_freeze_timeout to default value every time the daemon starts
+	if err := ioutil.WriteFile(SysFreezeTimeoutPath, []byte(DefaultTimeout), 0644); err != nil {
+		logger.Printf("Reset pm freeze timeout failed: %v", err)
+	}
+
+	watchChannel, watch_err := xs.Watch([]string{SuspendStatusPath})
+	if watch_err != nil {
+		message := fmt.Sprintf("watch xenstore error: %v\n", err)
+		logger.Print(message)
+		fmt.Fprint(os.Stderr, message)
+	}
+	// Ignore the first event trigger by xenstore-watch
+	<-watchChannel
 
 	collector := &guestmetric.Collector{
 		Client: xs,
@@ -144,7 +162,15 @@ func main() {
 		}
 
 		select {
+		case event := <-watchChannel:
+				if event.Path == SuspendStatusPath{
+					if err := ioutil.WriteFile(SysFreezeTimeoutPath, []byte(ExtendedTimeout), 0644); err != nil {
+						logger.Printf("Dump pm freeze timeout failed: %v", err)
+					}
+				}
+			continue
 		case <-exitChannel:
+			xs.StopWatch()
 			logger.Printf("Received an interrupt, stopping services...\n")
 			if c, ok := loggerWriter.(io.Closer); ok {
 				if err := c.Close(); err != nil {
@@ -154,6 +180,9 @@ func main() {
 			return
 
 		case <-resumedChannel:
+			if err := ioutil.WriteFile(SysFreezeTimeoutPath, []byte(DefaultTimeout), 0644); err != nil {
+				logger.Printf("Dump pm freeze timeout failed: %v", err)
+			}
 			logger.Printf("Trigger refresh after system resume\n")
 			continue
 
