@@ -23,14 +23,14 @@ const (
 	DivisorOne           int    = 1
 	DivisorTwo           int    = 2
 	DivisorLeastMultiple int    = 2 // The least common multiple, ensure every collector done before executing InvalidCacheFlush.
-	SuspendStatusPath    string = "control/process_suspend_status"
+	SuspendStatusPath    string = "control/suspend_initiate"
 	SysFreezeTimeoutPath string = "/sys/power/pm_freeze_timeout"
-	DefaultTimeout       string = "20000"
-	ExtendedTimeout      string = "300000"
+	ExtendedFreezeTimeout      string = "300000"
 )
 
 func main() {
 	var err error
+	defaultFreezeTimeout := "20000"
 
 	sleepInterval := flag.Int("i", 60, "Interval between updates (in seconds)")
 	debugFlag := flag.Bool("d", false, "Update to log in addition to xenstore")
@@ -72,9 +72,9 @@ func main() {
 		return
 	}
 
-	// Reset pm_freeze_timeout to default value every time the daemon starts
-	if err := ioutil.WriteFile(SysFreezeTimeoutPath, []byte(DefaultTimeout), 0644); err != nil {
-		logger.Printf("Reset pm freeze timeout failed: %v", err)
+	// timeout may be customized by user
+	if timeout, err := ioutil.ReadFile(SysFreezeTimeoutPath); err == nil {
+		defaultFreezeTimeout = string(timeout)
 	}
 
 	watchChannel, watch_err := xs.Watch([]string{SuspendStatusPath})
@@ -164,7 +164,7 @@ func main() {
 		select {
 		case event := <-watchChannel:
 				if event.Path == SuspendStatusPath{
-					if err := ioutil.WriteFile(SysFreezeTimeoutPath, []byte(ExtendedTimeout), 0644); err != nil {
+					if err := ioutil.WriteFile(SysFreezeTimeoutPath, []byte(ExtendedFreezeTimeout), 0644); err != nil {
 						logger.Printf("Dump pm freeze timeout failed: %v", err)
 					}
 				}
@@ -180,7 +180,7 @@ func main() {
 			return
 
 		case <-resumedChannel:
-			if err := ioutil.WriteFile(SysFreezeTimeoutPath, []byte(DefaultTimeout), 0644); err != nil {
+			if err := ioutil.WriteFile(SysFreezeTimeoutPath, []byte(defaultFreezeTimeout), 0644); err != nil {
 				logger.Printf("Dump pm freeze timeout failed: %v", err)
 			}
 			logger.Printf("Trigger refresh after system resume\n")
