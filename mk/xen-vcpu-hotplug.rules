@@ -1,1 +1,1 @@
-ACTION=="add", SUBSYSTEM=="cpu", RUN+="/bin/sh -c '( ! /usr/bin/xenstore-exists unique-domain-id 2>/dev/null ) || [ ! -e /sys$devpath/online ] || echo 1 > /sys$devpath/online'"
+ACTION=="add", SUBSYSTEM=="cpu", RUN+="/bin/sh -c '[ -e /dev/xen/xenbus ] && [ -e /sys$devpath/online ] && echo 1 > /sys$devpath/online'"

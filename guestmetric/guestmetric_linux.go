@@ -1,10 +1,10 @@
 package guestmetric
 
 import (
-	xenstoreclient "../xenstoreclient"
 	"bufio"
 	"bytes"
 	"fmt"
+	xenstoreclient "github.com/xenserver/xe-guest-utilities/xenstoreclient"
 	"os"
 	"path/filepath"
 	"regexp"
@@ -57,18 +57,24 @@ func (c *Collector) CollectMisc() (GuestMetric, error) {
 
 func (c *Collector) CollectMemory() (GuestMetric, error) {
 	current := make(GuestMetric, 0)
-	f, err := os.OpenFile("/proc/meminfo", os.O_RDONLY, 0666)
+	f, err := os.Open("/proc/meminfo")
 	if err != nil {
 		return nil, err
 	}
 	defer f.Close()
 	scanner := bufio.NewScanner(f)
+	foundMemAvailabel := false
 	for scanner.Scan() {
 		parts := regexp.MustCompile(`\w+`).FindAllString(scanner.Text(), -1)
 		switch parts[0] {
 		case "MemTotal":
 			current["meminfo_total"] = parts[1]
 		case "MemFree":
+			if !foundMemAvailabel{
+				current["meminfo_free"] = parts[1]
+			} 
+		case "MemAvailable":
+			foundMemAvailabel = true
 			current["meminfo_free"] = parts[1]
 		}
 	}
@@ -182,7 +188,7 @@ func (c *Collector) CollectNetworkAddr() (GuestMetric, error) {
 	current := make(GuestMetric, 0)
 
 	var paths []string
-	vifNamePrefixList := [...]string{"eth", "eno", "ens", "emp", "enx"}
+	vifNamePrefixList := [...]string{"eth", "eno", "ens", "emp", "enx", "enX"}
 	for _, prefix := range vifNamePrefixList {
 		prefixPaths, err := filepath.Glob(fmt.Sprintf("/sys/class/net/%s*", prefix))
 		if err != nil {
@@ -250,7 +256,7 @@ func (c *Collector) CollectDisk() (GuestMetric, error) {
 				return nil, err
 			}
 			blocksize := 512
-			if bs, err := readSysfs(fmt.Sprintf("/sys/block/%s/queue/physical_block_size", p)); err == nil {
+			if bs, err := readSysfs(fmt.Sprintf("/sys/block/%s/queue/physical_block_size", disk)); err == nil {
 				if bs1, err := strconv.Atoi(bs); err == nil {
 					blocksize = bs1
 				}

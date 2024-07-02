@@ -26,14 +26,14 @@ binary-arch: build
 
 	install -d $(DESTDIR)/usr/bin/
 	install -m 755 xenstore $(DESTDIR)/usr/bin/xenstore
-	ln -s /usr/bin/xenstore $(DESTDIR)/usr/bin/xenstore-read
-	ln -s /usr/bin/xenstore $(DESTDIR)/usr/bin/xenstore-write
-	ln -s /usr/bin/xenstore $(DESTDIR)/usr/bin/xenstore-exists
-	ln -s /usr/bin/xenstore $(DESTDIR)/usr/bin/xenstore-rm
-	ln -s /usr/bin/xenstore $(DESTDIR)/usr/bin/xenstore-list
-	ln -s /usr/bin/xenstore $(DESTDIR)/usr/bin/xenstore-ls
-	ln -s /usr/bin/xenstore $(DESTDIR)/usr/bin/xenstore-chmod
-	ln -s /usr/bin/xenstore $(DESTDIR)/usr/bin/xenstore-watch
+	ln -s xenstore $(DESTDIR)/usr/bin/xenstore-read
+	ln -s xenstore $(DESTDIR)/usr/bin/xenstore-write
+	ln -s xenstore $(DESTDIR)/usr/bin/xenstore-exists
+	ln -s xenstore $(DESTDIR)/usr/bin/xenstore-rm
+	ln -s xenstore $(DESTDIR)/usr/bin/xenstore-list
+	ln -s xenstore $(DESTDIR)/usr/bin/xenstore-ls
+	ln -s xenstore $(DESTDIR)/usr/bin/xenstore-chmod
+	ln -s xenstore $(DESTDIR)/usr/bin/xenstore-watch
 
 	cp xe-daemon $(DESTDIR)/usr/sbin/xe-daemon
 	chmod 0755 $(DESTDIR)/usr/sbin/xe-daemon
@@ -41,8 +41,6 @@ binary-arch: build
 	cp xen-vcpu-hotplug.rules $(DESTDIR)/lib/udev/rules.d/z10_xen-vcpu-hotplug.rules
 
 	dh_installinit --name xe-linux-distribution
-
-	dh_install citrix.list /usr/share/xe-guest-utilities
 
 	dh_installdocs LICENSE
 

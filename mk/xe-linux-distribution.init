@@ -29,9 +29,9 @@ action()
     $cmd
     ret=$?
     if [ $ret -eq 0 ] ; then
-	echo "OK"
+        echo "OK"
     else
-	echo "Failed"
+        echo "Failed"
     fi
     return $ret
 }
@@ -49,24 +49,24 @@ fi
 start()
 {
     if [ ! -e /proc/xen/xenbus ] ; then
-	if [ ! -d /proc/xen ] ; then
-	    action $"Mounting xenfs on /proc/xen:" /bin/false
-	    echo "Could not find /proc/xen directory."
-	    echo "You need a post 2.6.29-rc1 kernel with CONFIG_XEN_COMPAT_XENFS=y and CONFIG_XENFS=y|m"
-	    exit 1
-	else 
-	    # This is needed post 2.6.29-rc1 when /proc/xen support was pushed upstream as a xen filesystem
-	    action $"Mounting xenfs on /proc/xen:" mount -t xenfs none /proc/xen
-	fi
+        if [ ! -d /proc/xen ] ; then
+            action $"Mounting xenfs on /proc/xen:" /bin/false
+            echo "Could not find /proc/xen directory."
+            echo "You need a post 2.6.29-rc1 kernel with CONFIG_XEN_COMPAT_XENFS=y and CONFIG_XENFS=y|m"
+            exit 1
+        else
+            # This is needed post 2.6.29-rc1 when /proc/xen support was pushed upstream as a xen filesystem
+            action $"Mounting xenfs on /proc/xen:" mount -t xenfs none /proc/xen
+        fi
     fi
 
     if [ -e /proc/xen/capabilities ] && grep -q control_d /proc/xen/capabilities ; then
-	# Do not want daemon in domain 0
-	exit 0
+        # Do not want daemon in domain 0
+        exit 0
     fi
 
     action $"Detecting Linux distribution version:" \
-	${XE_LINUX_DISTRIBUTION} ${XE_LINUX_DISTRIBUTION_CACHE}
+        ${XE_LINUX_DISTRIBUTION} ${XE_LINUX_DISTRIBUTION_CACHE}
 
     action $"Starting xe daemon: " /bin/true
     mkdir -p $(dirname ${XE_DAEMON_PIDFILE})
@@ -101,15 +101,15 @@ case "$1" in
         start
         ;;
   stop)
-	stop
-	;;
+        stop
+        ;;
   status)
-	status
-	;;
+        status
+        ;;
   force-reload|restart)
-	stop
-	start
-	;;
+        stop
+        start
+        ;;
   *)
         # do not advertise unreasonable commands that there is no reason
         # to use with this device

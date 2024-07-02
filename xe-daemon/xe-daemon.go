@@ -1,10 +1,6 @@
 package main
 
 import (
-	guestmetric "../guestmetric"
-	syslog "../syslog"
-	system "../system"
-	xenstoreclient "../xenstoreclient"
 	"flag"
 	"fmt"
 	"io"
@@ -15,6 +11,11 @@ import (
 	"strconv"
 	"syscall"
 	"time"
+
+	guestmetric "github.com/xenserver/xe-guest-utilities/guestmetric"
+	syslog "github.com/xenserver/xe-guest-utilities/syslog"
+	system "github.com/xenserver/xe-guest-utilities/system"
+	xenstoreclient "github.com/xenserver/xe-guest-utilities/xenstoreclient"
 )
 
 const (
@@ -28,7 +29,7 @@ func main() {
 	var err error
 
 	sleepInterval := flag.Int("i", 60, "Interval between updates (in seconds)")
-	debugFlag := flag.Bool("d", false, "Update to stdout rather than xenstore")
+	debugFlag := flag.Bool("d", false, "Update to log in addition to xenstore")
 	balloonFlag := flag.Bool("B", true, "Do not report that ballooning is supported")
 	pid := flag.String("p", "", "Write the PID to FILE")
 
@@ -43,7 +44,7 @@ func main() {
 
 	var loggerWriter io.Writer = os.Stderr
 	var topic string = LoggerName
-	if w, err := syslog.NewSyslogWriter(topic); err == nil {
+	if w, err := syslog.NewSyslogWriter(topic, *debugFlag); err == nil {
 		loggerWriter = w
 		topic = ""
 	} else {
