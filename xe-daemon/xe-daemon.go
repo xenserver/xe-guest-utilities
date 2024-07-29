@@ -11,6 +11,7 @@ import (
 	"strconv"
 	"syscall"
 	"time"
+	"strings"
 
 	guestmetric "github.com/xenserver/xe-guest-utilities/guestmetric"
 	syslog "github.com/xenserver/xe-guest-utilities/syslog"
@@ -23,6 +24,8 @@ const (
 	DivisorOne           int    = 1
 	DivisorTwo           int    = 2
 	DivisorLeastMultiple int    = 2 // The least common multiple, ensure every collector done before executing InvalidCacheFlush.
+	SysFreezeTimeoutPath string = "/sys/power/pm_freeze_timeout"
+	ExtendedFreezeTimeout string = "300000"
 )
 
 func main() {
@@ -59,6 +62,14 @@ func main() {
 
 	resumedChannel := make(chan int)
 	go system.NotifyResumed(resumedChannel)
+
+	// extend pm_freeze_timeout to 5 min when it is default timeout
+	pmFreezeTimeout, err := ioutil.ReadFile(SysFreezeTimeoutPath)
+	if err == nil && strings.TrimSpace(string(pmFreezeTimeout)) == "20000" {
+		if err := ioutil.WriteFile(SysFreezeTimeoutPath, []byte(ExtendedFreezeTimeout), 0644); err != nil {
+			logger.Printf("Write pm_freeze_timeout error: %v\n", err)
+		}
+	}
 
 	xs, err := xenstoreclient.NewCachedXenstore(0)
 	if err != nil {
