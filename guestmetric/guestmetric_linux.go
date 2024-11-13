@@ -290,11 +290,12 @@ func (c *Collector) CollectDisk() (GuestMetric, error) {
 				"name":      name,
 				"size":      strconv.FormatInt(size*int64(blocksize), 10),
 			}
-			output, err := runCmd("pvs", "--noheadings", "--units", "b", path)
+			output, err := runCmd("pvs", "--noheadings", "--units", "b", "-o", "pv_free,pv_fmt", path)
 			if err == nil && output != "" {
+				//exclude the first blank element
 				parts := regexp.MustCompile(`\s+`).Split(output, -1)[1:]
-				i["free"] = strings.TrimSpace(parts[5])[:len(parts[5])-1]
-				i["filesystem"] = strings.TrimSpace(parts[2])
+				i["free"] = strings.TrimSpace(parts[0])[:len(parts[0])-1]
+				i["filesystem"] = strings.TrimSpace(parts[1])
 				i["mount_points/0"] = "[LVM]"
 			} else {
 				output, err = runCmd("mount")
