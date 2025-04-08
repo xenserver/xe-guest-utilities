@@ -1,6 +1,8 @@
 [Unit]
 Description=Linux Guest Agent
 ConditionVirtualization=xen
+After=network-online.target
+wants=network-online.target
 
 [Service]
 ExecStartPre=/usr/share/oem/xs/xe-linux-distribution /var/cache/xe-linux-distribution
