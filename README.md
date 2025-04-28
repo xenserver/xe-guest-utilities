@@ -34,7 +34,7 @@ In this case, project and source files are expected to put in GOPATH/src
 In newer versions, we don't need to set up the $GOROOT variable unless you use different Go versions
 
 `GOPATH`
-Go gets librarys from the directory `GOPATH`, so for the build to work, you need read/write permissions there. With `GO111MODULE` disabled, $GOPATH directory are expected to has below hierarchy. 
+Go gets libraries from the directory `GOPATH`, so for the build to work, you need read/write permissions there. With `GO111MODULE` disabled, $GOPATH directory are expected to has below hierarchy.
 ```bash
 └── src
     ├── github.com
@@ -86,10 +86,10 @@ In this case, we can place our project outside `$GOPATH`
 2. Setup your go environment configurations
 
 `GOPATH`
-Go gets librarys from the `GOPATH`, so for this to work, you need read/write permissions there.If in doubt, set `GOPATH` to a temporary location, ie: `export GOPATH=$(pwd)` sets `GOPATH` to the local folder
+Go gets libraries from the `GOPATH`, so for this to work, you need read/write permissions there.If in doubt, set `GOPATH` to a temporary location, ie: `export GOPATH=$(pwd)` sets `GOPATH` to the local folder
 
 `GO111MODULE`
-With `GO111MODULE` enabled, go projects are no longer confined to $GOPATH, instead it use go.mod to keep track fo each package and it's version
+With `GO111MODULE` enabled, go projects are no longer confined to $GOPATH, instead it use go.mod to keep track of each package and it's version
 
 e.g.
 let's say your project directory is /home/xe-guest-utilities-7.30.0
@@ -99,7 +99,7 @@ let's say your project directory is /home/xe-guest-utilities-7.30.0
 ```
 3. Get the project
 ```bash
-git clone https://github.com/xenserver/xe-guest-utilities.git $GOPATH/xe-guest-utilities`
+git clone https://github.com/xenserver/xe-guest-utilities.git $GOPATH/xe-guest-utilities
 ```
 
 4. Set external library
