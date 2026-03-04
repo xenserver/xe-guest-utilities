@@ -24,7 +24,7 @@ xe-guest-utilities.git/xe-daemon
 
 [Go development environment](https://golang.org/doc/install) is required to build the guest utilities.
 
-After commit [94942cd597e](https://github.com/xenserver/xe-guest-utilities/commit/94942cd597ede2fb27a6b6a85ee6de364f19882c) guest utilities not support version <= 1.11, with modern go versions (later than 1.11) we can build with below guides:
+After commit [d396066f782b](https://github.com/xenserver/xe-guest-utilities/commit/d396066f782b757dd6bd1391b2b48ad3a0e33802) guest utilities do not support version < 1.24, with Go versions 1.24 or later we can build with below guides:
 ## Build with GO111MODULE=off
 In this case, project and source files are expected to put in GOPATH/src
 1. Make sure go is installed in your environment, and set correctly in $PATH
@@ -74,19 +74,19 @@ git clone git@github.com:golang/sys.git $GOPATH/src/golang.org/x/sys
 Go into the right directory `cd $GOPATH/src/github.com/xenserver/xe-guest-utilities`
 now you can `make build` or `make`. Then you can get resulting files in `build/`, same layout as explained below
 -----------
-* The binarys will be in `build/obj`
+* The binaries will be in `build/obj`
 * In `build/stage` are all required files and where they go when installed.
 * In `build/dist` is a tarball with all files,symlinks and permissions.
 -----------
 
 ## Build with GO111MODULE=on
 
-In this case, we can place our project outside `$GOPATH`
+In this case, we can place our project outside `$GOPATH`.
 1. Make sure go is installed in your environment, and set correctly in `$PATH`
 2. Setup your go environment configurations
 
 `GOPATH`
-Go gets libraries from the `GOPATH`, so for this to work, you need read/write permissions there.If in doubt, set `GOPATH` to a temporary location, ie: `export GOPATH=$(pwd)` sets `GOPATH` to the local folder
+Go gets libraries from the `GOPATH`, so for this to work, you need read/write permissions there. If in doubt, set `GOPATH` to a temporary location, ie: `export GOPATH=$(pwd)` sets `GOPATH` to the local folder
 
 `GO111MODULE`
 With `GO111MODULE` enabled, go projects are no longer confined to $GOPATH, instead it use go.mod to keep track of each package and it's version
@@ -137,7 +137,7 @@ resulting files are in `build/`, same layout as explained above
   * attr/PVAddons/MinorVersion
   * attr/PVAddons/MicroVersion
   * attr/PVAddons/BuildVersion
-* runtime-dependant
+* runtime-dependent
   * control/feature-balloon = [01]
 
 ## changes on event (network config, hotplug, resume, migration...)
