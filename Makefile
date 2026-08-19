@@ -20,6 +20,12 @@ OBJECTDIR = $(BUILDDIR)/obj
 DISTDIR = $(BUILDDIR)/dist
 VENDORDIR = $(REPO)/vendor/$(shell basename $(REPO))
 
+# The version values reach the binary only through GO_LDFLAGS, so make cannot
+# see them as prerequisites and would happily reuse a binary built from an
+# older version. Encode them in a stamp filename so any change makes the old
+# stamp stale and forces a relink.
+VERSION_STAMP = $(BUILDDIR)/.version-$(PRODUCT_VERSION)-$(RELEASE)
+
 OBJECTS :=
 OBJECTS += $(OBJECTDIR)/xe-daemon
 OBJECTS += $(OBJECTDIR)/xenstore
@@ -80,7 +86,12 @@ $(DISTDIR)/$(PACKAGE)_$(VERSION)-$(RELEASE)_$(ARCH).tgz: $(OBJECTS)
 	  tar zcf $@ * \
 	)
 
-$(OBJECTDIR)/xe-daemon: $(XE_DAEMON_SOURCES)
+$(VERSION_STAMP):
+	mkdir -p $(BUILDDIR)
+	rm -f $(BUILDDIR)/.version-*
+	touch $@
+
+$(OBJECTDIR)/xe-daemon: $(XE_DAEMON_SOURCES) $(VERSION_STAMP)
 	$(info ***** Build xe-daemon ******)
 	mkdir -p $(OBJECTDIR)
 	$(GO_BUILD) $(GO_FLAGS) -ldflags "$(GO_LDFLAGS)" -o $@ ./xe-daemon
