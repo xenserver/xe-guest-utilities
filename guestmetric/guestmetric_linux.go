@@ -13,6 +13,27 @@ import (
 	"strings"
 )
 
+// Version information reported to the host through xenstore under
+// attr/PVAddons/*.
+//
+// Two build paths set these, and both have to keep working:
+//
+//   - the top-level Makefile links them in, e.g.
+//     go build -ldflags "-X github.com/xenserver/xe-guest-utilities/guestmetric.ProductMajorVersion=10"
+//   - the packaging makefiles under mk/ substitute the markers below in a copy
+//     of this file before building
+//
+// cmd/link documents -X as effective on a variable "declared in the source code
+// either uninitialized or initialized to a constant string expression", so the
+// markers are valid defaults for the sed path and are still overridden by the
+// linker on the module path.
+var (
+	ProductMajorVersion = "@PRODUCT_MAJOR_VERSION@"
+	ProductMinorVersion = "@PRODUCT_MINOR_VERSION@"
+	ProductMicroVersion = "@PRODUCT_MICRO_VERSION@"
+	NumericBuildNumber  = "@NUMERIC_BUILD_NUMBER@"
+)
+
 type Collector struct {
 	Client xenstoreclient.XenStoreClient
 	Ballon bool
@@ -47,10 +68,10 @@ func (c *Collector) CollectMisc() (GuestMetric, error) {
 		current["control/feature-balloon"] = "0"
 	}
 	current["attr/PVAddons/Installed"] = "1"
-	current["attr/PVAddons/MajorVersion"] = "@PRODUCT_MAJOR_VERSION@"
-	current["attr/PVAddons/MinorVersion"] = "@PRODUCT_MINOR_VERSION@"
-	current["attr/PVAddons/MicroVersion"] = "@PRODUCT_MICRO_VERSION@"
-	current["attr/PVAddons/BuildVersion"] = "@NUMERIC_BUILD_NUMBER@"
+	current["attr/PVAddons/MajorVersion"] = ProductMajorVersion
+	current["attr/PVAddons/MinorVersion"] = ProductMinorVersion
+	current["attr/PVAddons/MicroVersion"] = ProductMicroVersion
+	current["attr/PVAddons/BuildVersion"] = NumericBuildNumber
 
 	return current, nil
 }
