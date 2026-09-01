@@ -128,6 +128,11 @@ identify_redhat()
     # distro=rocky
     # Rocky Linux release 8.3
 
+    # distro=cloudlinux
+    # CloudLinux Server release 6.10 (Vladimir Lyakhov)
+    # CloudLinux Linux release 6.9
+    # CloudLinux release 7.7 (Valery Bykovsky)
+
     # distro=scientific
     # Scientific Linux release 6.5 (Carbon)
 
@@ -156,6 +161,8 @@ identify_redhat()
                -e 's/^CentOS release \([0-9]*\) (.*)/distro=centos;major=\1/gp;' \
                -e 's/^CentOS Linux release \([0-9]*\)\.\([0-9]*\).*$/distro=centos;major=\1;minor=\2/gp;' \
                -e 's/^CentOS Stream release \([0-9]*\).*$/distro=centos;major=\1/gp;' \
+               -e 's/^CloudLinux\( Linux|Server\)\? release \([0-9]*\)\.\([0-9]*\)\(\.[0-9]*\)\? (.*)/distro=cloudlinux;major=\2;minor=\1/gp;' \
+	             -e 's/^CloudLinux release \([0-9]*\)\.\([0-9]*\)\(\.[0-9]*\)\? (.*)/distro=cloudlinux;major=\1;minor=\2/gp;' \
                -e 's/^Rocky Linux release \([0-9]*\)\.\([0-9]*\).*$/distro=rocky;major=\1;minor=\2/gp;' \
                -e 's/^Enterprise Linux Enterprise Linux .* release \([0-9]*\)\.\([0-9]*\) (.*)$/distro=oracle;major=\1;minor=\2;/gp;' \
                -e 's/^Enterprise Linux Enterprise Linux .* release \([0-9]*\) (.*)$/distro=oracle;major=\1/gp;' \
