@@ -1,1 +1,1 @@
-ACTION=="add", SUBSYSTEM=="cpu", RUN+="/bin/sh -c '[ -e /dev/xen/xenbus ] && [ -e /sys$devpath/online ] && echo 1 > /sys$devpath/online'"
+ACTION=="add", SUBSYSTEM=="cpu", RUN+="/bin/sh -c 'if [ -e /dev/xen/xenbus ] && [ -e /sys${devpath}/online ]; then echo 1 > /sys${devpath}/online; fi'"
